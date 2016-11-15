@@ -300,7 +300,10 @@ export class Parser {
               console.log('node:', nodeItem.id, 
                 nodeItem._parent && nodeItem._parent.id ? '[parent: ' + nodeItem._parent.id + ']' : '', 
                 nodeItem._next && nodeItem._next.id ? '[next: ' + nodeItem._next.id  + ']' : '', 
-                nodeItem._prev && nodeItem._prev.id ? '[prev: ' + nodeItem._prev.id  + ']' : '');
+                nodeItem._prev && nodeItem._prev.id ? '[prev: ' + nodeItem._prev.id  + ']' : '',
+                nodeItem.type ? '[type: ' + nodeItem.type  + ']' : '',
+                nodeItem.typeName ? '[typeName: ' + nodeItem.type  + ']' : ''
+                );
 
               return this.recursive(nodeItem).then(() => {
                 return resolve();
@@ -313,7 +316,10 @@ export class Parser {
       console.log('node:', nodeItem.id, 
           nodeItem._parent && nodeItem._parent.id ? '[parent: ' + nodeItem._parent.id + ']' : '', 
           nodeItem._next && nodeItem._next.id ? '[next: ' + nodeItem._next.id  + ']' : '', 
-          nodeItem._prev && nodeItem._prev.id ? '[prev: ' + nodeItem._prev.id  + ']' : '');
+          nodeItem._prev && nodeItem._prev.id ? '[prev: ' + nodeItem._prev.id  + ']' : '',
+          nodeItem.type ? '[type: ' + nodeItem.type  + ']' : '',
+          nodeItem.typeName ? '[typeName: ' + nodeItem.type  + ']' : ''
+        );
       
       return this.recursive(nodeItem);
 

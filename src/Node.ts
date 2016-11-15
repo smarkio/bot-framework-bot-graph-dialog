@@ -65,6 +65,10 @@ export interface INode {
 		 */
 		varname?: string;
 		/**
+		 * Aditional variable names or alias to also be created
+		 */
+		additionalVarnames?: Array<string>;
+		/**
 		 * The node Type
 		 * 
 		 * @type {NodeType}
@@ -78,6 +82,13 @@ export interface INode {
 		 * @memberOf INode
 		 */
 		typeName: string;
+		/**
+		 * 
+		 * 
+		 * @type {boolean}
+		 * @memberOf INode
+		 */
+		needValidation: boolean;
 		/**
 		 * The node's body- the original json object
 		 * 
@@ -158,10 +169,21 @@ export class Node implements INode {
 	/**
 	 * 
 	 * 
+	 * @type {boolean}
+	 * @memberOf Node
+	 */
+	public needValidation: boolean;
+	/**
+	 * 
+	 * 
 	 * @type {string}
 	 * @memberOf Node
 	 */
 	public varname: string;
+	/**
+	 * Aditional variable names or alias to also be created
+	 */
+	public additionalVarnames: Array<string>;
 	/**
 	 * 
 	 * 
@@ -243,8 +265,8 @@ export class Node implements INode {
 		}
 		else
 			this.type = <NodeType>type;
-
 		this.varname = node.varname || this.id;
+		this.additionalVarnames = node.additionalVarnames || [];
 		this.steps = new List<INode>();
 		this.scenarios = new List<IScenario>();
 
