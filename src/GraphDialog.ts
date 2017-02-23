@@ -662,7 +662,6 @@ export class GraphDialog implements IGraphDialog {
 
     if (!(results.response && varname))
       return next(results);
-
     if (
       "undefined" != typeof currentNode.data.valueParser) {
         
@@ -671,17 +670,16 @@ export class GraphDialog implements IGraphDialog {
         parsers = [parsers];
       }
       results.beforeParseResponse = {};
-      
       for (let valueParser of parsers) {
         try { 
           if (this.customValueParsers.has(valueParser)) {
             results.beforeParseResponse[valueParser] = Object.assign({}, results.response);
             let parser = this.customValueParsers.get(valueParser);
-            results.response = parser.parse(session, results.response);
+            results.response = parser.parse(session, results.response, currentNode);
           }
           else {
             results.beforeParseResponse[valueParser] = Object.assign({}, results.response);
-            results.response = ValueParser[currentNode.data.valueParser](session, results.response);
+            results.response = ValueParser[currentNode.data.valueParser](session, results.response, currentNode);
           }
         }
         catch (e) {
@@ -707,6 +705,7 @@ export class GraphDialog implements IGraphDialog {
    */
   private stepResultCollectionHandler(session: builder.Session, results, next) {
     console.log('Result phase');
+    
     let currentNode = this.nav.getCurrentNode(session);
     let varname = currentNode.varname;
 
@@ -729,6 +728,8 @@ export class GraphDialog implements IGraphDialog {
         // TODO switch to enum
         switch (currentNode.data.type) {
           case 'choice':
+            value = currentNode.data.options[Object.keys(currentNode.data.options)[results.response.index]]
+            break;
           case 'time':
             value = results.response.entity;
             break;

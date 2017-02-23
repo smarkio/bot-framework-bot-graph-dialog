@@ -1,5 +1,7 @@
 import * as builder from 'botbuilder';
 
+import {INode} from './Node';
+
 export module ValueParser {
 
     /**
@@ -46,7 +48,6 @@ export module ValueParser {
         return value;
     }
 
-
 }
 
 export interface IParseValue {
@@ -55,7 +56,7 @@ export interface IParseValue {
      * @param  {any} value
      * @returns {any}
      */
-    (session: builder.Session, value: any): any
+    (session: builder.Session, value: any, currentNode: INode): any
 }
 
 export interface ICustomValueParser {
