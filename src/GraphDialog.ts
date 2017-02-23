@@ -385,16 +385,16 @@ export class GraphDialog implements IGraphDialog {
 
         if (Array.isArray(currentNode.data.text)) {
           for (let message of currentNode.data.text) {
-            message = strformat(message, session.dialogData.data);
             console.log(`sending text for node ${currentNode.id}, text: \'${message}\'`);
             session.send(this.replaceVariables(message, session));
           }
         } else {
-          var text = strformat(currentNode.data.text, session.dialogData.data);
+          var text = currentNode.data.text;
 
           console.log(`sending text for node ${currentNode.id}, text: \'${text}\'`);
           session.send(this.replaceVariables(text, session));
         }
+        console.log()
         return next();
 
       case NodeType.prompt:
@@ -598,10 +598,10 @@ export class GraphDialog implements IGraphDialog {
     }
   }
 
-  private replaceVariables(message: string, session) {
+  private replaceVariables(message: string, session: builder.Session) {
     return message.replace(/\{\{\%([^%]+)\%\}\}/g, function (_, item) {
-      if (typeof session.dialogData[item] !== 'undefined') {
-        return session.dialogData[item];
+      if (typeof session.dialogData.data[item] !== 'undefined') {
+        return session.dialogData.data[item];
       }
       return ' ';
     });
@@ -713,8 +713,8 @@ export class GraphDialog implements IGraphDialog {
     if (results.assignments instanceof Object) {
       for (let key in results.assignments) {
         if (results.assignments.hasOwnProperty(key)) {
-          session.dialogData[key] = results.assignments[key];
-          console.log('assigning request for node: %s, variable: %s, value: %s', currentNode.id, key, session.dialogData[key]);
+          session.dialogData.data[key] = results.assignments[key];
+          console.log('assigning request for node: %s, variable: %s, value: %s', currentNode.id, key, session.dialogData.data[key]);
         }
       }
     }
@@ -762,11 +762,11 @@ export class GraphDialog implements IGraphDialog {
         value = results.response;
     }
 
-    session.dialogData[varname] = value;
-    console.log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, varname, session.dialogData[varname]);
+    session.dialogData.data[varname] = value;
+    console.log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, varname, session.dialogData.data[varname]);
     for (let additionalVarname of currentNode.additionalVarnames) {
-      session.dialogData[additionalVarname] = session.dialogData[varname];
-      console.log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, additionalVarname, session.dialogData[varname]);
+      session.dialogData.data[additionalVarname] = session.dialogData[varname];
+      console.log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, additionalVarname, session.dialogData.data[varname]);
     }
     return next(results);
   }
