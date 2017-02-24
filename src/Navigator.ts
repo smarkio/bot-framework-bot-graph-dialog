@@ -86,7 +86,7 @@ export class Navigator {
    * 
    * @memberOf Navigator
    */
-  public getNextNode(session: builder.Session) : INode {
+  public getNextNode(session: builder.Session, overrideId?: string) : INode {
     console.log('getNextNode');
     let next : INode = null;
     let current = this.parser.getNodeInstanceById(session.privateConversationData._currentNodeId);
@@ -101,7 +101,27 @@ export class Navigator {
         next = scenario.node || scenario.steps.get(0);
       }
     }
+      
+    if (overrideId) {
+      console.log(`OverrideNode Id set, trying to find node ${overrideId}`);
+      next = this.parser.getNodeInstanceById(overrideId);
+      if(!next){
+        console.log('OverrideNode not found continuing with normal process');
+      }
+    }
 
+    if (!next) {
+      // If there are child scenarios, see if one of them answers a condition
+      // In case it is, choose the first step in that scenario to as the next step
+      let scenarios: List<IScenario> = current.scenarios;
+      for (var i=0; i<current.scenarios.size(); i++) {
+        var scenario = current.scenarios.get(i);
+
+        if (ConditionHandler.evaluateExpression(session.dialogData, scenario.condition)) {
+          next = scenario.node || scenario.steps.get(0);
+        }
+      }
+    }
     // if no next yet, get the first step
     next = next || current.steps.get(0);
 

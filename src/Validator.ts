@@ -1,3 +1,5 @@
+const vm = require('vm');
+
 export module Validator {
 
   /**
@@ -7,7 +9,7 @@ export module Validator {
    * @param {string} value
    * @param {Object} configuration
    */
-  export function validate(type: string, value: string|Date, configuration: any): any {
+  export function validate(type: string, value: string | Date, configuration: any): any {
 
     let result = false;
 
@@ -18,6 +20,12 @@ export module Validator {
         break;
       case 'regex':
         result = this.validateRegex(value, configuration);
+        break;
+      case 'function':
+        result = this.validateFunction(value, configuration);
+        break;
+      case 'length':
+        result = this.validateLength(value, configuration);
         break;
 
     }
@@ -37,15 +45,16 @@ export module Validator {
 
     if (configuration.min_date) {
       var dateMin = new Date(configuration.min_date).getTime();
-			if (date < dateMin) return false;
+      if (date < dateMin) return false;
     }
 
     if (configuration.max_date) {
       var dateMax = new Date(configuration.max_date).getTime();
-			if (date > dateMax) return false;
+      if (date > dateMax) return false;
     }
 
     return true;
+
   }
 
   /**
@@ -55,10 +64,51 @@ export module Validator {
    * @returns {boolean}
    */
   export function validateRegex(value: string, configuration: any): boolean {
-    var regex = new RegExp(configuration.pattern);
+
+
+    var regex = new RegExp(configuration.pattern, configuration.flags || '');
     var isValid = regex.test(value);
     return isValid;
+
   }
 
+  /**
+   *
+   * @param value
+   * @param configuration
+   * @returns {boolean}
+   */
+  export function validateFunction(value: string, configuration: any): boolean {
+
+    var isValid = false;
+    try {
+      let evaluationSandBox = vm.createContext({ value: value });
+      isValid = vm.runInContext(configuration.function,evaluationSandBox);
+    } catch (error) {
+      console.log('Error occurred during evaluation of validation function', error, configuration);
+    }
+    return isValid;
+
+  }
+
+  /**
+   *
+   * @param value
+   * @param configuration
+   * @returns {boolean}
+   */
+  export function validateLength(value: string, configuration: any): boolean {
+
+    if (configuration.min > 0 && value.length < configuration.min) {
+      return false;
+    }
+
+    if (configuration.max > 0 && value.length > configuration.max) {
+      return false;
+    }
+
+    return true;
+
+  }
 
 }
