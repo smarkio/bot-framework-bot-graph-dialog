@@ -1,6 +1,6 @@
 import * as builder from 'botbuilder';
 
-import {INode} from './Node';
+import { INode } from './Node';
 
 export module ValueParser {
 
@@ -44,7 +44,19 @@ export module ValueParser {
             return result[1];
         }
 
-        
+
+        return value;
+    }
+
+    /**
+     * 
+     * @param {builder.Session} session 
+     * @param {any} value 
+     */
+    export function trim(session: builder.Session, value: any): any {
+        if (typeof value === "string") {
+            return value.trim();
+        }
         return value;
     }
 
