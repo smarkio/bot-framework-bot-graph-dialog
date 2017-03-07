@@ -1,4 +1,5 @@
 import * as builder from 'botbuilder';
+import {IGraphDialog} from './GraphDialog';
 
 /**
  * Interface for a custom handler callback
@@ -8,9 +9,10 @@ export interface IExecute {
      * @param  {builder.Session} session
      * @param  {} next
      * @param  {} data
+	 * @param  {IGraphDialog} graphDialog
      * @returns void
      */
-    (session: builder.Session, next, data): void
+    (session: builder.Session, next, data, graphDialog: IGraphDialog): void
 }
 
 /**

@@ -11,6 +11,7 @@ import * as extend from 'extend';
 import * as strformat from 'strformat';
 import { Validator } from './Validator';
 import { ValueParser, ICustomValueParser, CustomValueParser } from './ValueParser';
+import events = require('events');
 
 
 var uuid = require('uuid');
@@ -144,6 +145,13 @@ export interface IGraphDialog {
    * @memberOf IGraphDialog
    */
   reloadSession(session: builder.Session): void
+
+    /**
+   * 
+   * @param {string} message 
+   * @param {builder.Session} session 
+   */
+   replaceVariables(message: string, session: builder.Session): string
 }
 
 
@@ -154,7 +162,7 @@ export interface IGraphDialog {
  * @class GraphDialog
  * @implements {IGraphDialog}
  */
-export class GraphDialog implements IGraphDialog {
+export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
 	/**
 	 * 
@@ -216,6 +224,7 @@ export class GraphDialog implements IGraphDialog {
 	 * @memberOf GraphDialog
 	 */
   constructor(private options: IGraphDialogOptions = {}) {
+    super();
     if (!options.bot) throw new Error('please provide the bot object');
     this.intentScorer = new IntentScorer();
     // Initialize custom handlers
@@ -472,7 +481,7 @@ export class GraphDialog implements IGraphDialog {
         let customHandler: ICustomNodeTypeHandler = this.customTypeHandlers.get(currentNode.typeName);
         if (customHandler) {
           console.log(`invoking custom node type handler: ${currentNode.typeName}`);
-          return customHandler.execute(session, next, currentNode.data);
+          return customHandler.execute(session, next, currentNode.data, this);
         }
 
         var msg = 'Node type ' + currentNode.typeName + ' is not recognized';
@@ -541,6 +550,9 @@ export class GraphDialog implements IGraphDialog {
           case "imBack":
             buttons.push(builder.CardAction.imBack(session, item.value, this.replaceVariables(item.label, session)));
             break;
+          case "postBack":
+            buttons.push(builder.CardAction.postBack(session, item.value, this.replaceVariables(item.label, session)));
+            break;
         }
       });
       if (buttons.length > 0) {
@@ -560,7 +572,7 @@ export class GraphDialog implements IGraphDialog {
    * @returns {Message}
    */
 
-  private generateHeroCardMessage(builder, session, node) {
+  public generateHeroCardMessage(builder, session, node) {
     var hero = this.generateHeroCard(builder, session, node.data);
 
     return new builder.Message(session)
@@ -577,12 +589,11 @@ export class GraphDialog implements IGraphDialog {
    * @returns {Message}
    */
 
-  private generateCarouselMessage(builder, session, node) {
+  public generateCarouselMessage(builder, session, node) {
     var data = node.data;
 
     if ("undefined" != typeof data.text) {
-      var text = strformat(data.text, session.dialogData);
-      session.send(this.replaceVariables(text, session));
+      session.send(this.replaceVariables(data.text, session));
     }
 
     if ("undefined" != typeof data.cards && data.cards.length > 0) {
@@ -598,7 +609,12 @@ export class GraphDialog implements IGraphDialog {
     }
   }
 
-  private replaceVariables(message: string, session: builder.Session) {
+  /**
+   * 
+   * @param {string} message 
+   * @param {builder.Session} session 
+   */
+  public replaceVariables(message: string, session: builder.Session) {
     return message.replace(/\{\{\%([^%]+)\%\}\}/g, function (_, item) {
       if (typeof session.dialogData.data[item] !== 'undefined') {
         return session.dialogData.data[item];
@@ -716,6 +732,9 @@ export class GraphDialog implements IGraphDialog {
           console.log('assigning request for node: %s, variable: %s, value: %s', currentNode.id, key, session.dialogData.data[key]);
         }
       }
+    }
+    if(results.nextStepId){
+      session.dialogData['_nextStep'] = results.nextStepId;
     }
     if (!(results.response && varname)) {
       return next(results);
