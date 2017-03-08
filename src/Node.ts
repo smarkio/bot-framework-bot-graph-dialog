@@ -58,6 +58,13 @@ export interface INode {
 		 */
 		id: string;
 		/**
+		 * Name
+		 * 
+		 * @type {string}
+		 * @memberOf INode
+		 */
+		name: string;
+		/**
 		 * The variable name that will be used to save the user input for this node
 		 * 
 		 * @type {string}
@@ -167,6 +174,13 @@ export class Node implements INode {
 	 */
 	public id: string;
 	/**
+	 * Name
+	 * 
+	 * @type {string}
+	 * @memberOf Node
+	 */
+	public name: string;
+	/**
 	 * 
 	 * 
 	 * @type {boolean}
@@ -259,6 +273,7 @@ export class Node implements INode {
 	constructor(node: INode, type: string | NodeType) {
 		
 		this.id = node.id;
+		this.name = node.name || node.id;
 		if (typeof type === 'string') {
 			this.type = NodeType[type];
 			this.typeName = type;

@@ -146,12 +146,12 @@ export interface IGraphDialog {
    */
   reloadSession(session: builder.Session): void
 
-    /**
-   * 
-   * @param {string} message 
-   * @param {builder.Session} session 
-   */
-   replaceVariables(message: string, session: builder.Session): string
+  /**
+ * 
+ * @param {string} message 
+ * @param {builder.Session} session 
+ */
+  replaceVariables(message: string, session: builder.Session): string
 }
 
 
@@ -163,6 +163,15 @@ export interface IGraphDialog {
  * @implements {IGraphDialog}
  */
 export class GraphDialog extends events.EventEmitter implements IGraphDialog {
+
+  static readonly STEP_START_EVENT = 'step_start';
+  static readonly STEP_END_EVENT = 'step_end';
+  static readonly STEP_CHANGE_EVENT = 'step_change';
+  static readonly STEP_OVERRIDE_EVENT = 'step_override';
+  static readonly STEP_VALIDATION_FAILED_EVENT = 'step_validation_failed';
+  static readonly CHAT_START = 'chat_start_event';
+  static readonly CHAT_END_EVENT = 'chat_end_event';
+  static readonly VARIABLE_SET_EVENT = 'chat_variable_set';
 
 	/**
 	 * 
@@ -340,6 +349,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
     this.options.bot.dialog(this.internalPath, [
       (session, args, next) => {
+        console.log('before processing');
         session.dialogData.data = args || {};
         if (this.options.onBeforeProcessingStep)
           return this.options.onBeforeProcessingStep.call(this, session, args, next);
@@ -653,6 +663,11 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
           let invalidMsg = "undefined" != typeof element.setup.invalid_msg ? element.setup.invalid_msg : 'Invalid value';
           session.send(this.replaceVariables(invalidMsg, session));
           currentNode.needValidation = true;
+          this.emit(GraphDialog.STEP_VALIDATION_FAILED_EVENT, session, {
+            currentNode: Object.assign({}, currentNode),
+            response: results.reponse,
+            validator: element
+          });
           return next(results);
         }
       }
@@ -680,14 +695,14 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       return next(results);
     if (
       "undefined" != typeof currentNode.data.valueParser) {
-        
+
       let parsers = currentNode.data.valueParser;
       if (!Array.isArray(parsers)) {
         parsers = [parsers];
       }
       results.beforeParseResponse = {};
       for (let valueParser of parsers) {
-        try { 
+        try {
           if (this.customValueParsers.has(valueParser)) {
             results.beforeParseResponse[valueParser] = Object.assign({}, results.response);
             let parser = this.customValueParsers.get(valueParser);
@@ -721,7 +736,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
    */
   private stepResultCollectionHandler(session: builder.Session, results, next) {
     console.log('Result phase');
-    
+
     let currentNode = this.nav.getCurrentNode(session);
     let varname = currentNode.varname;
 
@@ -733,7 +748,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         }
       }
     }
-    if(results.nextStepId){
+    if (results.nextStepId) {
       session.dialogData['_nextStep'] = results.nextStepId;
     }
     if (!(results.response && varname)) {
@@ -783,6 +798,11 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     }
 
     session.dialogData.data[varname] = value;
+    this.emit(GraphDialog.VARIABLE_SET_EVENT, session, {
+      currentNode: currentNode,
+      varname: varname,
+      value: value
+    });
     console.log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, varname, session.dialogData.data[varname]);
     for (let additionalVarname of currentNode.additionalVarnames) {
       session.dialogData.data[additionalVarname] = session.dialogData[varname];
@@ -807,23 +827,51 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     let nextNode: INode = null;
 
     let currentNode = this.nav.getCurrentNode(session);
+    if (currentNode && currentNode.id == this.parser.root.id) {
+      this.emit(GraphDialog.CHAT_START, session, {
+        root: this.parser.root
+      });
+    }
+
     if (currentNode.needValidation) {
       nextNode = currentNode;
       currentNode.needValidation = false;
     } else {
       if (session.dialogData['_nextStep']) {
         nextNode = this.nav.getNextNode(session, session.dialogData['_nextStep']);
+        if (nextNode && nextNode.id == session.dialogData['_nextStep']) {
+          this.emit(GraphDialog.STEP_OVERRIDE_EVENT, session, {
+            from: Object.assign({}, currentNode),
+            to: Object.assign({}, nextNode)
+          });
+        }
       } else {
         nextNode = this.nav.getNextNode(session);
       }
     }
     delete session.dialogData['_nextStep'];
-
+    if (!nextNode || nextNode.id != currentNode.id) {
+      this.emit(GraphDialog.STEP_END_EVENT, session, {
+        node: Object.assign({}, currentNode)
+      });
+    }
     if (nextNode) {
       console.log(`step handler node: ${nextNode.id}`);
+      if (nextNode.id != currentNode.id) {
+        this.emit(GraphDialog.STEP_CHANGE_EVENT, session, {
+          from: Object.assign({}, currentNode),
+          to: Object.assign({}, nextNode)
+        });
+        this.emit(GraphDialog.STEP_START_EVENT, session, {
+          node: Object.assign({}, nextNode)
+        });
+      }
     }
     else {
       console.log('ending dialog');
+      this.emit(GraphDialog.CHAT_END_EVENT,session, {
+        'root': this.parser.root
+      });
       return session.endConversation();
     }
 
