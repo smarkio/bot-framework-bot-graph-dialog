@@ -805,7 +805,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     });
     console.log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, varname, session.dialogData.data[varname]);
     for (let additionalVarname of currentNode.additionalVarnames) {
-      session.dialogData.data[additionalVarname] = session.dialogData[varname];
+      session.dialogData.data[additionalVarname] = session.dialogData.data[varname];
       console.log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, additionalVarname, session.dialogData.data[varname]);
     }
     return next(results);
