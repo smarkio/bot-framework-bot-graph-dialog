@@ -27,6 +27,9 @@ export module Validator {
       case 'length':
         result = this.validateLength(value, configuration);
         break;
+      case 'notEmpty':
+        result = (value != null && value != '');
+        break;
 
     }
 
