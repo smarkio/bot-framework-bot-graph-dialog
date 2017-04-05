@@ -687,7 +687,6 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
  * @memberOf GraphDialog
  */
   private stepValueParserHandler(session: builder.Session, results, next) {
-    console.log('Validation phase');
     let currentNode = this.nav.getCurrentNode(session);
     let varname = currentNode.varname;
 
