@@ -8,6 +8,7 @@ import * as builder from 'botbuilder';
 import * as path from 'path';
 import * as extend from 'extend';
 import * as strformat from 'strformat';
+import { Log } from './Logging';
 
 /**
  * Interface for the Navigator constructor options object
@@ -66,7 +67,7 @@ export class Navigator {
    * @memberOf Navigator
    */
   public getCurrentNode(session: builder.Session): INode {
-    console.log('getCurrentNode');
+    Log('getCurrentNode');
     let currNodeId = <string>session.privateConversationData._currentNodeId;
     if (!currNodeId) {
       let root = this.parser.root;
@@ -87,7 +88,7 @@ export class Navigator {
    * @memberOf Navigator
    */
   public getNextNode(session: builder.Session, overrideId?: string) : INode {
-    console.log('getNextNode');
+    Log('getNextNode');
     let next : INode = null;
     let current = this.parser.getNodeInstanceById(session.privateConversationData._currentNodeId);
 
@@ -103,10 +104,10 @@ export class Navigator {
     }
       
     if (overrideId) {
-      console.log(`OverrideNode Id set, trying to find node ${overrideId}`);
+      Log(`OverrideNode Id set, trying to find node ${overrideId}`);
       next = this.parser.getNodeInstanceById(overrideId);
       if(!next){
-        console.log('OverrideNode not found continuing with normal process');
+        Log('OverrideNode not found continuing with normal process');
       }
     }
 
@@ -134,7 +135,7 @@ export class Navigator {
       nodeNavigator = nodeNavigator.parent;
     }
 
-    console.log(`getNextNode: [current: ${current.id}, next: ${next && next.id}]`);
+    Log(`getNextNode: [current: ${current.id}, next: ${next && next.id}]`);
     session.privateConversationData._currentNodeId = next && next.id;
 
     return next;

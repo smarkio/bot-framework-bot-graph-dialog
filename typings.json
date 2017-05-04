@@ -1,0 +1,17 @@
+{
+  "name": "bot-graph-dialog",
+  "globalDependencies": {
+    "UUID": "github:DefinitelyTyped/DefinitelyTyped/uuid/UUID.d.ts#44be13ae844ec0721109542d5902e41438d72855",
+    "bluebird-2.0": "github:DefinitelyTyped/DefinitelyTyped/bluebird/bluebird-2.0.d.ts#44be13ae844ec0721109542d5902e41438d72855",
+    "extend": "github:DefinitelyTyped/DefinitelyTyped/extend/extend.d.ts#44be13ae844ec0721109542d5902e41438d72855",
+    "form-data": "github:DefinitelyTyped/DefinitelyTyped/form-data/form-data.d.ts#44be13ae844ec0721109542d5902e41438d72855",
+    "node": "github:DefinitelyTyped/DefinitelyTyped/node/node.d.ts#44be13ae844ec0721109542d5902e41438d72855",
+    "promise": "github:DefinitelyTyped/DefinitelyTyped/promise/promise.d.ts#44be13ae844ec0721109542d5902e41438d72855",
+    "request": "github:DefinitelyTyped/DefinitelyTyped/request/request.d.ts#44be13ae844ec0721109542d5902e41438d72855",
+    "request-promise": "github:DefinitelyTyped/DefinitelyTyped/request-promise/request-promise.d.ts#44be13ae844ec0721109542d5902e41438d72855",
+    "underscore": "github:DefinitelyTyped/DefinitelyTyped/underscore/underscore.d.ts#44be13ae844ec0721109542d5902e41438d72855"
+  },
+  "dependencies": {
+    "debug": "registry:npm/debug#2.0.0+20160723033700"
+  }
+}

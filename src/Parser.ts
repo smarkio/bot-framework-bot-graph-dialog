@@ -9,6 +9,7 @@ import * as extend from 'extend';
 import * as strformat from 'strformat';
 import * as Promise from 'bluebird';
 import * as crypto from 'crypto';
+import {Log} from './Logging';
 
 /**
  * Interface for the IParser options object
@@ -170,7 +171,7 @@ export class Parser {
       var graph: any = {};
       extend(true, graph, origGraph);
 
-      console.log('loading scenario:', graph.id);
+      Log('loading scenario:', graph.id);
       this.updateModels(graph.models);
       
       this.recursive(graph).then(() => {
@@ -251,7 +252,7 @@ export class Parser {
       if (nodes.length > index + 1) nodeItem._next = nodes[index + 1];
 
       if (this.isSubScenario(nodeItem)) {
-        console.log(`sub-scenario for node: ${nodeItem.id} [embedding sub scenario: ${nodeItem.subScenario}]`);
+        Log(`sub-scenario for node: ${nodeItem.id} [embedding sub scenario: ${nodeItem.subScenario}]`);
 
         return new Promise((resolve, reject) => {
           this.options.loadScenario(nodeItem.subScenario)
@@ -259,7 +260,7 @@ export class Parser {
             extend(true, nodeItem, scenarioObj);
             this.updateModels(scenarioObj.models);
 
-            console.log('node:', nodeItem.id, 
+            Log('node:', nodeItem.id, 
               nodeItem._parent && nodeItem._parent.id ? '[parent: ' + nodeItem._parent.id + ']' : '', 
               nodeItem._next && nodeItem._next.id ? '[next: ' + nodeItem._next.id  + ']' : '', 
               nodeItem._prev && nodeItem._prev.id ? '[prev: ' + nodeItem._prev.id  + ']' : '');
@@ -272,7 +273,7 @@ export class Parser {
       }
       else if (nodeItem.type === 'handler') {
         var handler = nodeItem.data.name || '';
-        console.log(`loading handler for node: ${nodeItem.id} [embedding sub scenario: ${handler}]`);
+        Log(`loading handler for node: ${nodeItem.id} [embedding sub scenario: ${handler}]`);
 
         if (nodeItem.data.js) {
           // handler code is embeded in the json in a multiline format (array) or a string
@@ -297,7 +298,7 @@ export class Parser {
               }
               this.handlers.add(handler, func);
 
-              console.log('node:', nodeItem.id, 
+              Log('node:', nodeItem.id, 
                 nodeItem._parent && nodeItem._parent.id ? '[parent: ' + nodeItem._parent.id + ']' : '', 
                 nodeItem._next && nodeItem._next.id ? '[next: ' + nodeItem._next.id  + ']' : '', 
                 nodeItem._prev && nodeItem._prev.id ? '[prev: ' + nodeItem._prev.id  + ']' : '',
@@ -313,7 +314,7 @@ export class Parser {
         }
       }
 
-      console.log('node:', nodeItem.id, 
+      Log('node:', nodeItem.id, 
           nodeItem._parent && nodeItem._parent.id ? '[parent: ' + nodeItem._parent.id + ']' : '', 
           nodeItem._next && nodeItem._next.id ? '[next: ' + nodeItem._next.id  + ']' : '', 
           nodeItem._prev && nodeItem._prev.id ? '[prev: ' + nodeItem._prev.id  + ']' : '',

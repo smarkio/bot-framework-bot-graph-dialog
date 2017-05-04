@@ -1,4 +1,5 @@
 const vm = require('vm');
+import {Log} from './Logging';
 
 export module Validator {
 
@@ -88,7 +89,7 @@ export module Validator {
       let evaluationSandBox = vm.createContext({ value: value });
       isValid = vm.runInContext(configuration.function,evaluationSandBox);
     } catch (error) {
-      console.log('Error occurred during evaluation of validation function', error, configuration);
+      Log('Error occurred during evaluation of validation function', error, configuration);
     }
     return isValid;
 
