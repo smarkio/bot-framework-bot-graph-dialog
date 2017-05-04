@@ -12,7 +12,7 @@ import * as strformat from 'strformat';
 import { Validator } from './Validator';
 import { ValueParser, ICustomValueParser, CustomValueParser } from './ValueParser';
 import events = require('events');
-
+import { Log, ErrorLog } from './Logging';
 
 var uuid = require('uuid');
 
@@ -241,6 +241,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     options.customValueParsers = options.customValueParsers || new Array<ICustomValueParser>();
     this.internalPath = '/_' + uuid.v4();
     this.setBotDialog();
+    this.checkOrCreateCustomDialogs();
 
     this.customTypeHandlers = new Map<CustomNodeTypeHandler>();
     for (let i = 0; i < options.customTypeHandlers.length; i++) {
@@ -273,7 +274,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     return new Promise((resolve, reject) => {
       this.parser = new Parser(this.options);
       this.parser.init().then(() => {
-        console.log('parser is ready');
+        Log('parser is ready');
         this.nav = new Navigator(this.parser);
         return resolve(this);
       }).catch(e => reject(e));
@@ -305,7 +306,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
   public restartDialog(session: builder.Session): void {
 
     session.privateConversationData = {};
-    console.log('calling loop function after restarting dialog');
+    Log('calling loop function after restarting dialog');
 
     // find this dialog on the callstack
     let dialogIndex = -1;
@@ -331,9 +332,9 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
    * @memberOf GraphDialog
    */
   public getDialog(): IStepFunction {
-    console.log('get dialog');
+    Log('get dialog');
     return (session: builder.Session, results, next) => {
-      console.log('calling loop function for the first time');
+      Log('calling loop function for the first time');
       session.beginDialog(this.internalPath);
     };
   }
@@ -349,7 +350,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
     this.options.bot.dialog(this.internalPath, [
       (session, args, next) => {
-        console.log('before processing');
+        Log('before processing');
         session.dialogData.data = args || {};
         if (this.options.onBeforeProcessingStep)
           return this.options.onBeforeProcessingStep.call(this, session, args, next);
@@ -376,10 +377,48 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         return this.setNextStepHandler(session, args, next);
       },
       (session, args, next) => {
-        console.log('calling loop function');
+        Log('calling loop function');
         session.replaceDialog(this.internalPath, session.dialogData.data);
       }
     ]);
+  }
+
+  private checkOrCreateCustomDialogs() {
+    if (!this.options.bot.dialog('carouselPrompt')) {
+      this.options.bot.dialog('carouselPrompt', [
+        (session, args, next) => {
+          if (!session.dialogData.config) {
+            session.dialogData.data = args.data;
+            session.dialogData.config = args.config;
+            session.send(this.generateCarouselMessage(builder, session, args.config));
+          } else {
+            next();
+          }
+        },
+        (session, args, next) => {
+          let response = session.message.text;
+          if (typeof session.dialogData.config.responses != "undefined") {
+            if (typeof session.dialogData.config.responses[response] != "undefined") {
+              let value = session.dialogData.config.response;
+              for (let card of session.dialogData.config.cards) {
+                if (card.id == session.dialogData.config.responses[response]) {
+                  var copyOfCard = Object.assign({}, card);
+                  copyOfCard.data.buttons = [];
+                  session.send(this.generateHeroCardMessage(builder, session, card));
+                  session.endDialogWithResult({ 'response': value });
+                  return next({ 'response': value });
+                }
+              }
+              session.send(this.generateCarouselMessage(builder, session, session.dialogData.config));
+              return;
+            }
+
+          }
+
+        }
+      ]
+      );
+    }
   }
 
   /**
@@ -396,7 +435,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
   private stepInteractionHandler(session: builder.Session, results, next): void {
     session.privateConversationData._lastMessage = session.message && session.message.text;
     let currentNode = this.nav.getCurrentNode(session);
-    console.log(`perform action: ${currentNode.id}, ${currentNode.type}`);
+    Log(`perform action: ${currentNode.id}, ${currentNode.type}`);
 
     switch (currentNode.type) {
 
@@ -404,20 +443,19 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
         if (Array.isArray(currentNode.data.text)) {
           for (let message of currentNode.data.text) {
-            console.log(`sending text for node ${currentNode.id}, text: \'${message}\'`);
+            Log(`sending text for node ${currentNode.id}, text: \'${message}\'`);
             session.send(this.replaceVariables(message, session));
           }
         } else {
           var text = currentNode.data.text;
 
-          console.log(`sending text for node ${currentNode.id}, text: \'${text}\'`);
+          Log(`sending text for node ${currentNode.id}, text: \'${text}\'`);
           session.send(this.replaceVariables(text, session));
         }
-        console.log()
         return next();
 
       case NodeType.prompt:
-        console.log(`builder.ListStyle.button: ${builder.ListStyle["button"]}`);
+        Log(`builder.ListStyle.button: ${builder.ListStyle["button"]}`);
         var promptType = currentNode.data.type || 'text';
         builder.Prompts[promptType](
           session,
@@ -437,7 +475,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         var botModels = currentNode.data.models.map(model => this.nav.models.get(model));
 
         var score_text = session.dialogData.data[currentNode.data.source] || session.privateConversationData._lastMessage;
-        console.log(`LUIS scoring for node: ${currentNode.id}, text: \'${score_text}\' LUIS models: ${botModels}`);
+        Log(`LUIS scoring for node: ${currentNode.id}, text: \'${score_text}\' LUIS models: ${botModels}`);
 
         this.intentScorer.collectIntents(botModels, score_text, currentNode.data.threashold)
           .then(intents => {
@@ -455,7 +493,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       case NodeType.handler:
         var handlerName = currentNode.data.name;
         let handler: IHandler = <IHandler>this.nav.handlers.get(handlerName);
-        console.log('calling handler: ', currentNode.id, handlerName);
+        Log('calling handler: ', currentNode.id, handlerName);
         handler(session, next, currentNode.data);
         break;
 
@@ -463,7 +501,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         return next();
 
       case NodeType.end:
-        console.log('ending dialog, node:', currentNode.id);
+        Log('ending dialog, node:', currentNode.id);
         session.send(currentNode.data.text || 'Bye bye!');
         session.endConversation(); // this will also clear the privateConversationData 
         break;
@@ -473,24 +511,17 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         return next();
 
       case NodeType.carousel:
-        if (currentNode.data.sent == true) {
-          results = {};
-          results.response = session.message.text;
-          return next(results);
-        }
-        session.send(this.generateCarouselMessage(builder, session, currentNode));
-        if (currentNode.data.wait_for_response) {
-          console.log('will wait for response');
-          currentNode.data.sent = true;
-          break;
-        }
-        return next();
+        session.beginDialog('carouselPrompt',{
+          data: session.dialogData.data,
+          config: currentNode.data
+        });
+        break;
 
       default:
 
         let customHandler: ICustomNodeTypeHandler = this.customTypeHandlers.get(currentNode.typeName);
         if (customHandler) {
-          console.log(`invoking custom node type handler: ${currentNode.typeName}`);
+          Log(`invoking custom node type handler: ${currentNode.typeName}`);
           return customHandler.execute(session, next, currentNode.data, this);
         }
 
@@ -595,13 +626,11 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
    *
    * @param builder
    * @param session
-   * @param node
+   * @param data
    * @returns {Message}
    */
 
-  public generateCarouselMessage(builder, session, node) {
-    var data = node.data;
-
+  public generateCarouselMessage(builder, session, data) {
     if ("undefined" != typeof data.text) {
       session.send(this.replaceVariables(data.text, session));
     }
@@ -646,7 +675,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
    * @memberOf GraphDialog
    */
   private stepValidationHandler(session: builder.Session, results, next) {
-    console.log('Validation phase');
+    Log('Validation phase');
     let currentNode = this.nav.getCurrentNode(session);
     let varname = currentNode.varname;
 
@@ -709,11 +738,11 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
           }
           else {
             results.beforeParseResponse[valueParser] = Object.assign({}, results.response);
-            results.response = ValueParser[currentNode.data.valueParser](session, results.response, currentNode);
+            results.response = ValueParser[valueParser](session, results.response, currentNode);
           }
         }
         catch (e) {
-          console.log('Validation phase', e);
+          ErrorLog('Value Parser phase', e);
         }
       }
 
@@ -734,7 +763,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
    * @memberOf GraphDialog
    */
   private stepResultCollectionHandler(session: builder.Session, results, next) {
-    console.log('Result phase');
+    Log('Result phase');
 
     let currentNode = this.nav.getCurrentNode(session);
     let varname = currentNode.varname;
@@ -743,7 +772,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       for (let key in results.assignments) {
         if (results.assignments.hasOwnProperty(key)) {
           session.dialogData.data[key] = results.assignments[key];
-          console.log('assigning request for node: %s, variable: %s, value: %s', currentNode.id, key, session.dialogData.data[key]);
+          Log('assigning request for node: %s, variable: %s, value: %s', currentNode.id, key, session.dialogData.data[key]);
         }
       }
     }
@@ -770,28 +799,6 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
             value = results.response;
         }
         break;
-      case NodeType.carousel:
-        currentNode.data.sent = false;
-        if (typeof currentNode.data.responses != "undefined") {
-          if (typeof currentNode.data.responses[results.response] != "undefined") {
-            value = results.response;
-            for (let card of currentNode.data.cards) {
-              if (card.id == currentNode.data.responses[results.response]) {
-                var copyOfCard = Object.assign({}, card);
-                copyOfCard.data.buttons = [];
-                session.send(this.generateHeroCardMessage(builder, session, card));
-              }
-            }
-          }
-          else {
-            currentNode.needValidation = true;
-            return next(results);
-          }
-        }
-        else {
-          value = results.response;
-        }
-        break;
       default:
         value = results.response;
     }
@@ -802,10 +809,10 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       varname: varname,
       value: value
     });
-    console.log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, varname, session.dialogData.data[varname]);
+    Log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, varname, session.dialogData.data[varname]);
     for (let additionalVarname of currentNode.additionalVarnames) {
       session.dialogData.data[additionalVarname] = session.dialogData.data[varname];
-      console.log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, additionalVarname, session.dialogData.data[varname]);
+      Log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, additionalVarname, session.dialogData.data[varname]);
     }
     return next(results);
   }
@@ -855,7 +862,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       });
     }
     if (nextNode) {
-      console.log(`step handler node: ${nextNode.id}`);
+      Log(`step handler node: ${nextNode.id}`);
       if (nextNode.id != currentNode.id) {
         this.emit(GraphDialog.STEP_CHANGE_EVENT, session, {
           from: Object.assign({}, currentNode),
@@ -867,8 +874,8 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       }
     }
     else {
-      console.log('ending dialog');
-      this.emit(GraphDialog.CHAT_END_EVENT,session, {
+      Log('ending dialog');
+      this.emit(GraphDialog.CHAT_END_EVENT, session, {
         'root': this.parser.root
       });
       return session.endConversation();
