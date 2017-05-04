@@ -12,7 +12,7 @@ import * as strformat from 'strformat';
 import { Validator } from './Validator';
 import { ValueParser, ICustomValueParser, CustomValueParser } from './ValueParser';
 import events = require('events');
-import { Log, ErrorLog } from './Logging';
+import { Log, ErrorLog, DebugLog } from './Logging';
 
 var uuid = require('uuid');
 
@@ -399,14 +399,14 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
           let response = session.message.text;
           if (typeof session.dialogData.config.responses != "undefined") {
             if (typeof session.dialogData.config.responses[response] != "undefined") {
-              let value = session.dialogData.config.response;
+              let value = response;
               for (let card of session.dialogData.config.cards) {
                 if (card.id == session.dialogData.config.responses[response]) {
                   var copyOfCard = Object.assign({}, card);
                   copyOfCard.data.buttons = [];
                   session.send(this.generateHeroCardMessage(builder, session, card));
                   session.endDialogWithResult({ 'response': value });
-                  return next({ 'response': value });
+                  return;
                 }
               }
               session.send(this.generateCarouselMessage(builder, session, session.dialogData.config));
@@ -763,7 +763,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
    * @memberOf GraphDialog
    */
   private stepResultCollectionHandler(session: builder.Session, results, next) {
-    Log('Result phase');
+    DebugLog('Result phase', results);
 
     let currentNode = this.nav.getCurrentNode(session);
     let varname = currentNode.varname;
