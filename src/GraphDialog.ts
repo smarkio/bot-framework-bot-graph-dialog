@@ -19,7 +19,7 @@ var uuid = require('uuid');
 
 /**
  * Interface for {IGraphDialog} options object
- * 
+ *
  * @export
  * @interface IGraphDialogOptions
  * @extends {INavigatorOptions}
@@ -27,35 +27,35 @@ var uuid = require('uuid');
 export interface IGraphDialogOptions extends INavigatorOptions {
 	/**
 	 * The bot object
-	 * 
+	 *
 	 * @type {builder.UniversalBot}
 	 * @memberOf IGraphDialogOptions
 	 */
   bot?: builder.UniversalBot;
   /**
    * list of {ICustomNodeTypeHandler} objects
-   * 
+   *
    * @type {ICustomNodeTypeHandler[]}
    * @memberOf IGraphDialogOptions
    */
   customTypeHandlers?: ICustomNodeTypeHandler[];
   /**
    * list of {ICustomValueParser} objects
-   * 
+   *
    * @type {ICustomValueParser[]}
    * @memberOf IGraphDialogOptions
    */
   customValueParsers?: ICustomValueParser[];
   /**
    * a {IHandler} objects for custom logics before a step is being processed
-   * 
+   *
    * @type {IHandler}
    * @memberOf IGraphDialogOptions
    */
   onBeforeProcessingStep?: IHandler;
   /**
  * a {IHandler} objects for custom logics after a step is being processed
- * 
+ *
  * @type {IHandler}
  * @memberOf IGraphDialogOptions
  */
@@ -64,7 +64,7 @@ export interface IGraphDialogOptions extends INavigatorOptions {
 
 /**
  * Interface to define a custom node handler
- * 
+ *
  * @export
  * @interface IHandler
  */
@@ -74,7 +74,7 @@ export interface IHandler {
 
 /**
  * Interface to define a step function
- * 
+ *
  * @interface IStepFunction
  */
 interface IStepFunction {
@@ -83,48 +83,48 @@ interface IStepFunction {
 
 /**
  * Interface for {GraphDialog} class
- * 
+ *
  * @export
  * @interface IGraphDialog
  */
 export interface IGraphDialog {
   /**
    * Init graph dialog
-   * 
+   *
    * @returns {Promise<IGraphDialog>}
-   * 
+   *
    * @memberOf IGraphDialog
    */
   init(): Promise<IGraphDialog>;
   /**
    * Gets the resulting dialog to attach on the bot
-   * 
+   *
    * @returns {IStepFunction}
-   * 
+   *
    * @memberOf IGraphDialog
    */
   getDialog(): IStepFunction;
   /**
    * Gets the dialog version from the scenario's json
-   * 
+   *
    * @returns {string}
-   * 
+   *
    * @memberOf IGraphDialog
    */
   getDialogVersion(): string;
   /**
    * Gets the the dialog id from the scenario's json
-   * 
+   *
    * @returns {string}
-   * 
+   *
    * @memberOf IGraphDialog
    */
   getDialogId(): string;
   /**
    * Cancel the flow of the existing dialog and starts a new one
-   * 
+   *
    * @returns {void}
-   * 
+   *
    * @memberOf IGraphDialog
    */
   restartDialog(session: builder.Session): void;
@@ -132,32 +132,50 @@ export interface IGraphDialog {
    * Reloads scenarios for this instance.
    * Use this when the scenarios were updated on the remote data source.
    * After calling this method you'll probably want to call the restartDialog API to restart the updated dialog.
-   * 
+   *
    * @returns {Promise<IGraphDialog>}
-   * 
+   *
    * @memberOf IGraphDialog
    */
   reload(): Promise<IGraphDialog>;
 
   /**
    * Clears graphData from session privateConversationData
-   * 
+   *
    * @memberOf IGraphDialog
    */
   reloadSession(session: builder.Session): void
 
   /**
- * 
- * @param {string} message 
- * @param {builder.Session} session 
+ *
+ * @param {string} message
+ * @param {builder.Session} session
  */
   replaceVariables(message: string, session: builder.Session): string
+
+  /**
+   * Gets the scenario id.
+   *
+   * @returns {string}
+   *
+   * @memberof IGraphDialog
+   */
+  getScenarioId(): string;
+
+  /**
+   * Gets an array of all existing chat blocks graph dialogs.
+   *
+   * @returns {Array<IGraphDialog>}
+   *
+   * @memberof IGraphDialog
+   */
+  getBlockGraphDialogs(): Array<IGraphDialog>;
 }
 
 
 /**
  * The Graph Dialog class manages the dialog's state
- * 
+ *
  * @export
  * @class GraphDialog
  * @implements {IGraphDialog}
@@ -174,39 +192,39 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
   static readonly VARIABLE_SET_EVENT = 'chat_variable_set';
 
 	/**
-	 * 
-	 * 
+	 *
+	 *
 	 * @private
 	 * @type {Navigator}
 	 * @memberOf GraphDialog
 	 */
   private nav: Navigator;
   /**
-   * 
-   * 
+   *
+   *
    * @private
    * @type {IIntentScorer}
    * @memberOf GraphDialog
    */
   private intentScorer: IIntentScorer;
 	/**
-	 * 
-	 * 
+	 *
+	 *
 	 * @private
-	 * 
+	 *
 	 * @memberOf GraphDialog
 	 */
   private done: () => any;
   /**
-   * 
-   * 
+   *
+   *
    * @private
    * @type {Map<ICustomNodeTypeHandler>}
    * @memberOf GraphDialog
    */
   private customTypeHandlers: Map<ICustomNodeTypeHandler>;
   /**
-   * 
+   *
    * @private
    * @type {Map<ICustomValueParser>}
    * @memberOf GraphDialog
@@ -223,13 +241,14 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
   private parser: Parser = null;
   private internalPath: string;
+  private blockGraphDialogs: Array<GraphDialog> = [];
 
 
 	/**
 	 * Creates an instance of GraphDialog.
-	 * 
+	 *
 	 * @param {IGraphDialogOptions} [options={}]
-	 * 
+	 *
 	 * @memberOf GraphDialog
 	 */
   constructor(private options: IGraphDialogOptions = {}) {
@@ -264,18 +283,75 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
   }
 
   /**
+   * Gets the scenario id.
+   *
+   * @returns {string}
+   *
+   * @memberof IGraphDialog
+   */
+  public getScenarioId(): string {
+    return this.options.scenario;
+  }
+
+  /**
+   * Gets the scenario id of the parent dialog if any, it's own scenario id otherwise.
+   *
+   * @returns string
+   */
+  getParentScenearioId(): string {
+    return this.options.scenario.replace(/\/block\/.+$/, '');
+  }
+
+  /**
+   * Gets an array of all existing chat blocks graph dialogs.
+   *
+   * @returns {Array<IGraphDialog>}
+   *
+   * @memberof IGraphDialog
+   */
+  public getBlockGraphDialogs(): Array<IGraphDialog> {
+    return this.blockGraphDialogs;
+  }
+
+  /**
    * Initialize a graph based on graph options like a predefined JSON schema
-   * 
+   *
    * @returns {Promise<any>}
-   * 
+   *
    * @memberOf GraphDialog
    */
   public init(): Promise<any> {
     return new Promise((resolve, reject) => {
       this.parser = new Parser(this.options);
-      this.parser.init().then(() => {
+      this.parser.init().then((graph) => {
         Log('parser is ready');
         this.nav = new Navigator(this.parser);
+
+        var that = this;
+        if (graph.hasOwnProperty('blocks') && Array.isArray(graph.blocks) && graph.blocks.length) {
+          let promises = [];
+          for (var i = 0; i < graph.blocks.length; i++) {
+            let block = graph.blocks[i];
+            let options: IGraphDialogOptions = {
+              bot: this.options.bot,
+              customTypeHandlers: this.options.customTypeHandlers,
+              customValueParsers: this.options.customValueParsers,
+              scenario: `${this.options.scenario}/block/${block.id}`,
+              loadScenario: () => {
+                return new Promise((resolve) => {
+                  resolve(block);
+                });
+              }
+            };
+            promises.push(new GraphDialog(options).init());
+          }
+
+          return Promise.all(promises).then((blockGraphDialogs) => {
+            this.blockGraphDialogs = blockGraphDialogs;
+            resolve(that);
+          });
+        }
+
         return resolve(this);
       }).catch(e => reject(e));
     });
@@ -283,11 +359,11 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
 	/**
 	 * Generate a new graph dialog constructed based on a scenario name
-	 * 
+	 *
 	 * @static
 	 * @param {IGraphDialogOptions} [options={}]
 	 * @returns {Promise<IGraphDialog>}
-	 * 
+	 *
 	 * @memberOf GraphDialog
 	 */
   public static fromScenario(options: IGraphDialogOptions = {}): Promise<IGraphDialog> {
@@ -300,7 +376,9 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
   }
 
   public reloadSession(session: builder.Session): void {
-    delete session.privateConversationData._currentNodeId;
+    if (session.hasOwnProperty('dialogData') && session.dialogData) {
+      delete session.dialogData._currentNodeId;
+    }
   }
 
   public restartDialog(session: builder.Session): void {
@@ -326,24 +404,24 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
   /**
    * Returns the dialog steps to bind to the bot object
-   * 
+   *
    * @returns {IStepFunction}
-   * 
+   *
    * @memberOf GraphDialog
    */
   public getDialog(): IStepFunction {
     Log('get dialog');
     return (session: builder.Session, results, next) => {
       Log('calling loop function for the first time');
-      session.beginDialog(this.internalPath);
+      session.beginDialog(this.internalPath, results);
     };
   }
 
   /**
     * This is where the magic happens. Loops this list of steps for each node.
-    * 
+    *
     * @private
-    * 
+    *
     * @memberOf GraphDialog
     */
   private setBotDialog(): void {
@@ -351,7 +429,13 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     this.options.bot.dialog(this.internalPath, [
       (session, args, next) => {
         Log('before processing');
-        session.dialogData.data = args || {};
+        // Recover current node id after exiting from a block.
+        if (args && args.hasOwnProperty('_overrideCurrentNodeId')) {
+          session.dialogData.data = args.data || {};
+          session.dialogData._currentNodeId = args._overrideCurrentNodeId;
+        } else {
+          session.dialogData.data = args || {};
+        }
         if (this.options.onBeforeProcessingStep)
           return this.options.onBeforeProcessingStep.call(this, session, args, next);
         else return next();
@@ -377,10 +461,24 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         return this.setNextStepHandler(session, args, next);
       },
       (session, args, next) => {
+        return this.startBlockHandler(session, args, next);
+      },
+      (session, args, next) => {
         Log('calling loop function');
-        session.replaceDialog(this.internalPath, session.dialogData.data);
+
+        // Merge block dialog and current dialog data.
+        session.replaceDialog(this.internalPath, { data: Object.assign(Object.assign({}, session.dialogData.data), args), _overrideCurrentNodeId: session.dialogData._currentNodeId });
       }
     ]);
+  }
+
+  private startBlockHandler(session: builder.Session, args, next): any {
+    Log('check for new block');
+    if (session.dialogData.hasOwnProperty('_beginBlock')) {
+      session.beginDialog(`/${this.getParentScenearioId()}/block/${session.dialogData['_beginBlock']}`, { data: session.dialogData.data, _overrideCurrentNodeId: null });
+    } else {
+      next();
+    }
   }
 
   private checkOrCreateCustomDialogs() {
@@ -423,13 +521,13 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
   /**
    * This is where the bot interacts with the user
-   * 
+   *
    * @private
    * @param {builder.Session} session
    * @param {any} results
    * @param {any} next
    * @returns {void}
-   * 
+   *
    * @memberOf GraphDialog
    */
   private stepInteractionHandler(session: builder.Session, results, next): void {
@@ -469,7 +567,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       case NodeType.score:
         /**
          * gets list of models
-         * 
+         *
          * @param {any} model
          */
         var botModels = currentNode.data.models.map(model => this.nav.models.get(model));
@@ -483,9 +581,9 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
               this.stepResultCollectionHandler(session, { response: intents[0] }, next);
             }
           },
-          function (err) {
-            throw error;
-          }
+            function (err) {
+              throw error;
+            }
           );
 
         break;
@@ -503,7 +601,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       case NodeType.end:
         Log('ending dialog, node:', currentNode.id);
         session.send(currentNode.data.text || 'Bye bye!');
-        session.endConversation(); // this will also clear the privateConversationData 
+        session.endConversation(); // this will also clear the privateConversationData
         break;
 
       case NodeType.heroCard:
@@ -511,7 +609,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         return next();
 
       case NodeType.carousel:
-        session.beginDialog('carouselPrompt',{
+        session.beginDialog('carouselPrompt', {
           data: session.dialogData.data,
           config: currentNode.data
         });
@@ -649,9 +747,9 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
   }
 
   /**
-   * 
-   * @param {string} message 
-   * @param {builder.Session} session 
+   *
+   * @param {string} message
+   * @param {builder.Session} session
    */
   public replaceVariables(message: string, session: builder.Session) {
     return message.replace(/\{\{\%([^%]+)\%\}\}/g, function (_, item) {
@@ -662,16 +760,15 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     });
   }
 
-
   /**
    * Handling validation of the user input
-   * 
+   *
    * @private
    * @param {builder.Session} session
    * @param {any} results
    * @param {any} next
    * @returns
-   * 
+   *
    * @memberOf GraphDialog
    */
   private stepValidationHandler(session: builder.Session, results, next) {
@@ -706,13 +803,13 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
   /**
  * Handling validation of the user input
- * 
+ *
  * @private
  * @param {builder.Session} session
  * @param {any} results
  * @param {any} next
  * @returns
- * 
+ *
  * @memberOf GraphDialog
  */
   private stepValueParserHandler(session: builder.Session, results, next) {
@@ -753,13 +850,13 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
   /**
    * Handling collection of the user input
-   * 
+   *
    * @private
    * @param {builder.Session} session
    * @param {any} results
    * @param {any} next
    * @returns
-   * 
+   *
    * @memberOf GraphDialog
    */
   private stepResultCollectionHandler(session: builder.Session, results, next) {
@@ -819,13 +916,13 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
   /**
    * Evaluates and moves to the next node in the graph
-   * 
+   *
    * @private
    * @param {builder.Session} session
    * @param {any} args
    * @param {any} next
    * @returns {*}
-   * 
+   *
    * @memberOf GraphDialog
    */
   private setNextStepHandler(session: builder.Session, args, next): any {
@@ -878,7 +975,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       this.emit(GraphDialog.CHAT_END_EVENT, session, {
         'root': this.parser.root
       });
-      return session.endConversation();
+      return session.endDialogWithResult(session.dialogData.data);
     }
 
     return next(args);

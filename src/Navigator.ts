@@ -12,18 +12,18 @@ import { Log } from './Logging';
 
 /**
  * Interface for the Navigator constructor options object
- * 
+ *
  * @export
  * @interface INavigatorOptions
  * @extends {IParserOptions}
  */
 export interface INavigatorOptions extends IParserOptions {
-	
-} 
+
+}
 
 /**
  * Helper class to navigate the dialog graph
- * 
+ *
  * @export
  * @class Navigator
  */
@@ -31,14 +31,14 @@ export class Navigator {
 
   /**
    * Collection of Luis models
-   * 
+   *
    * @type {Map<ILuisModel>}
    * @memberOf Navigator
    */
   public models: Map<ILuisModel>;
   /**
    * Collection of custom handlers
-   * 
+   *
    * @type {Map<any>}
    * @memberOf Navigator
    */
@@ -46,32 +46,32 @@ export class Navigator {
 
 	/**
 	 * Creates an instance of Navigator.
-	 * 
+	 *
 	 * @param {Parser} parser
 	 * @param {INavigatorOptions} [options={}]
-	 * 
+	 *
 	 * @memberOf Navigator
 	 */
-	constructor(private parser: Parser, private options: INavigatorOptions = {}) {
+  constructor(private parser: Parser, private options: INavigatorOptions = {}) {
     this.models = parser.models;
     this.handlers = parser.handlers;
-	}
+  }
 
 
   /**
    * Returns the current node of the dialog
-   * 
+   *
    * @param {builder.Session} session
    * @returns {INode}
-   * 
+   *
    * @memberOf Navigator
    */
   public getCurrentNode(session: builder.Session): INode {
     Log('getCurrentNode');
-    let currNodeId = <string>session.privateConversationData._currentNodeId;
+    let currNodeId = <string>session.dialogData._currentNodeId;
     if (!currNodeId) {
       let root = this.parser.root;
-      session.privateConversationData._currentNodeId = root && root.id;
+      session.dialogData._currentNodeId = root && root.id;
       return root;
     }
 
@@ -81,32 +81,32 @@ export class Navigator {
 
   /**
    * Retreives the next node in the dialog
-   * 
+   *
    * @param {builder.Session} session
    * @returns {INode}
-   * 
+   *
    * @memberOf Navigator
    */
-  public getNextNode(session: builder.Session, overrideId?: string) : INode {
+  public getNextNode(session: builder.Session, overrideId?: string): INode {
     Log('getNextNode');
-    let next : INode = null;
-    let current = this.parser.getNodeInstanceById(session.privateConversationData._currentNodeId);
+    let next: INode = null;
+    let current = this.parser.getNodeInstanceById(session.dialogData._currentNodeId);
 
     // If there are child scenarios, see if one of them answers a condition
     // In case it is, choose the first step in that scenario to as the next step
     let scenarios: List<IScenario> = current.scenarios;
-    for (var i=0; i<current.scenarios.size(); i++) {
+    for (var i = 0; i < current.scenarios.size(); i++) {
       var scenario = current.scenarios.get(i);
 
       if (ConditionHandler.evaluateExpression(session.dialogData.data, scenario.condition)) {
         next = scenario.node || scenario.steps.get(0);
       }
     }
-      
+
     if (overrideId) {
       Log(`OverrideNode Id set, trying to find node ${overrideId}`);
       next = this.parser.getNodeInstanceById(overrideId);
-      if(!next){
+      if (!next) {
         Log('OverrideNode not found continuing with normal process');
       }
     }
@@ -115,7 +115,7 @@ export class Navigator {
       // If there are child scenarios, see if one of them answers a condition
       // In case it is, choose the first step in that scenario to as the next step
       let scenarios: List<IScenario> = current.scenarios;
-      for (var i=0; i<current.scenarios.size(); i++) {
+      for (var i = 0; i < current.scenarios.size(); i++) {
         var scenario = current.scenarios.get(i);
 
         if (ConditionHandler.evaluateExpression(session.dialogData, scenario.condition)) {
@@ -136,7 +136,7 @@ export class Navigator {
     }
 
     Log(`getNextNode: [current: ${current.id}, next: ${next && next.id}]`);
-    session.privateConversationData._currentNodeId = next && next.id;
+    session.dialogData._currentNodeId = next && next.id;
 
     return next;
   }
