@@ -163,6 +163,17 @@ export interface IGraphDialog {
   getScenarioId(): string;
 
   /**
+   * Gets the scneario id of a block of the current dialog.
+   *
+   * @param {string} block Block name.
+   *
+   * @returns {string}
+   *
+   * @memberof IGraphDialog
+   */
+  getBlockScenarioId(block: string): string;
+
+  /**
    * Gets an array of all existing chat blocks graph dialogs.
    *
    * @returns {Array<IGraphDialog>}
@@ -294,11 +305,24 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
   }
 
   /**
+   * Gets the scneario id of a block of the current dialog.
+   *
+   * @param {string} block Block name.
+   *
+   * @returns {string}
+   *
+   * @memberof IGraphDialog
+   */
+  public getBlockScenarioId(block: string): string {
+    return `${this.getParentScenearioId()}/block/${block}`
+  }
+
+  /**
    * Gets the scenario id of the parent dialog if any, it's own scenario id otherwise.
    *
    * @returns string
    */
-  getParentScenearioId(): string {
+  private getParentScenearioId(): string {
     return this.options.scenario.replace(/\/block\/.+$/, '');
   }
 
@@ -438,7 +462,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         }
         if (this.options.onBeforeProcessingStep)
           return this.options.onBeforeProcessingStep.call(this, session, args, next);
-        else return next();
+        else return next(args);
       },
       (session, args, next) => {
         return this.stepInteractionHandler(session, args, next);
@@ -455,13 +479,10 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       (session, args, next) => {
         if (this.options.onAfterProcessingStep)
           return this.options.onAfterProcessingStep.call(this, session, args, next);
-        else return next();
+        else return next(args);
       },
       (session, args, next) => {
         return this.setNextStepHandler(session, args, next);
-      },
-      (session, args, next) => {
-        return this.startBlockHandler(session, args, next);
       },
       (session, args, next) => {
         Log('calling loop function');
@@ -470,15 +491,6 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         session.replaceDialog(this.internalPath, { data: Object.assign(Object.assign({}, session.dialogData.data), args), _overrideCurrentNodeId: session.dialogData._currentNodeId });
       }
     ]);
-  }
-
-  private startBlockHandler(session: builder.Session, args, next): any {
-    Log('check for new block');
-    if (session.dialogData.hasOwnProperty('_beginBlock')) {
-      session.beginDialog(`/${this.getParentScenearioId()}/block/${session.dialogData['_beginBlock']}`, { data: session.dialogData.data, _overrideCurrentNodeId: null });
-    } else {
-      next();
-    }
   }
 
   private checkOrCreateCustomDialogs() {
@@ -975,7 +987,11 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       this.emit(GraphDialog.CHAT_END_EVENT, session, {
         'root': this.parser.root
       });
-      return session.endDialogWithResult(session.dialogData.data);
+      if (session.dialogStack().length > 1) {
+        return session.endDialogWithResult(session.dialogData.data);
+      } else {
+        return session.endConversation();
+      }
     }
 
     return next(args);
