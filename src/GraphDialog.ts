@@ -13,6 +13,7 @@ import { Validator } from './Validator';
 import { ValueParser, ICustomValueParser, CustomValueParser } from './ValueParser';
 import events = require('events');
 import { Log, ErrorLog, DebugLog } from './Logging';
+import * as utils from './Utils';
 
 var uuid = require('uuid');
 
@@ -145,13 +146,6 @@ export interface IGraphDialog {
    * @memberOf IGraphDialog
    */
   reloadSession(session: builder.Session): void
-
-  /**
- *
- * @param {string} message
- * @param {builder.Session} session
- */
-  replaceVariables(message: string, session: builder.Session): string
 
   /**
    * Gets the scenario id.
@@ -453,6 +447,8 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     this.options.bot.dialog(this.internalPath, [
       (session, args, next) => {
         Log('before processing');
+        // Add variables object.
+        session.privateConversationData._vars = session.privateConversationData._vars || {};
         // Recover current node id after exiting from a block.
         if (args && args.hasOwnProperty('_overrideCurrentNodeId')) {
           session.dialogData.data = args.data || {};
@@ -546,7 +542,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     session.privateConversationData._lastMessage = session.message && session.message.text;
     let currentNode = this.nav.getCurrentNode(session);
     let skipAfterError = false;
-    if (currentNode.skipAfterError) {
+    if (currentNode && currentNode.skipAfterError) {
       skipAfterError = true;
       currentNode.skipAfterError = false;
     }
@@ -559,13 +555,13 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         if (Array.isArray(currentNode.data.text)) {
           for (let message of currentNode.data.text) {
             Log(`sending text for node ${currentNode.id}, text: \'${message}\'`);
-            session.send(this.replaceVariables(message, session));
+            session.send(utils.replaceVariables(message, session));
           }
         } else {
           var text = currentNode.data.text;
 
           Log(`sending text for node ${currentNode.id}, text: \'${text}\'`);
-          session.send(this.replaceVariables(text, session));
+          session.send(utils.replaceVariables(text, session));
         }
         return next();
 
@@ -574,7 +570,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         var promptType = currentNode.data.type || 'text';
         builder.Prompts[promptType](
           session,
-          skipAfterError ? {} : this.replaceVariables(currentNode.data.text, session),
+          skipAfterError ? {} : utils.replaceVariables(currentNode.data.text, session),
           currentNode.data.options,
           {
             listStyle: currentNode.data.config && currentNode.data.config.listStyle && builder.ListStyle[currentNode.data.config.listStyle] || builder.ListStyle.button
@@ -661,13 +657,13 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     var hero = new builder.HeroCard(session);
 
     if ("undefined" != typeof data.title) {
-      hero.title(this.replaceVariables(data.title, session));
+      hero.title(utils.replaceVariables(data.title, session));
     }
     if ("undefined" != typeof data.subtitle) {
-      hero.subtitle(this.replaceVariables(data.subtitle, session));
+      hero.subtitle(utils.replaceVariables(data.subtitle, session));
     }
     if ("undefined" != typeof data.text) {
-      hero.text(this.replaceVariables(data.text, session));
+      hero.text(utils.replaceVariables(data.text, session));
     }
     if ("undefined" != typeof data.images[0] && data.images.length > 0) {
       let imageCard = builder.CardImage.create(session, data.images[0]);
@@ -701,13 +697,13 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       data.buttons.forEach((item, index) => {
         switch (item.action) {
           case "openUrl":
-            buttons.push(builder.CardAction.openUrl(session, item.value, this.replaceVariables(item.label || item.value, session)));
+            buttons.push(builder.CardAction.openUrl(session, item.value, utils.replaceVariables(item.label || item.value, session)));
             break;
           case "imBack":
-            buttons.push(builder.CardAction.imBack(session, item.value, this.replaceVariables(item.label, session)));
+            buttons.push(builder.CardAction.imBack(session, item.value, utils.replaceVariables(item.label, session)));
             break;
           case "postBack":
-            buttons.push(builder.CardAction.postBack(session, item.value, this.replaceVariables(item.label, session)));
+            buttons.push(builder.CardAction.postBack(session, item.value, utils.replaceVariables(item.label, session)));
             break;
         }
       });
@@ -747,7 +743,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
   public generateCarouselMessage(builder, session, data) {
     if ("undefined" != typeof data.text) {
-      session.send(this.replaceVariables(data.text, session));
+      session.send(utils.replaceVariables(data.text, session));
     }
 
     if ("undefined" != typeof data.cards && data.cards.length > 0) {
@@ -761,20 +757,6 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         .attachmentLayout(builder.AttachmentLayout.carousel)
         .attachments(cards);
     }
-  }
-
-  /**
-   *
-   * @param {string} message
-   * @param {builder.Session} session
-   */
-  public replaceVariables(message: string, session: builder.Session) {
-    return message.replace(/\{\{\%([^%]+)\%\}\}/g, function (_, item) {
-      if (typeof session.dialogData.data[item] !== 'undefined') {
-        return session.dialogData.data[item];
-      }
-      return ' ';
-    });
   }
 
   /**
@@ -804,7 +786,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         var isValid = Validator.validate(element.type, results.response, element.setup);
         if (false == isValid) {
           let invalidMsg = "undefined" != typeof element.setup.invalid_msg ? element.setup.invalid_msg : 'Invalid value';
-          session.send(this.replaceVariables(invalidMsg, session));
+          session.send(utils.replaceVariables(invalidMsg, session));
           currentNode.needValidation = true;
           if (currentNode.body && currentNode.body.showAfterError === false) {
             currentNode.skipAfterError = true;
@@ -888,8 +870,8 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     if (results.assignments instanceof Object) {
       for (let key in results.assignments) {
         if (results.assignments.hasOwnProperty(key)) {
-          session.dialogData.data[key] = results.assignments[key];
-          Log('assigning request for node: %s, variable: %s, value: %s', currentNode.id, key, session.dialogData.data[key]);
+          session.privateConversationData._vars[key] = results.assignments[key];
+          Log('assigning request for node: %s, variable: %s, value: %s', currentNode.id, key, session.privateConversationData._vars[key]);
         }
       }
     }
@@ -920,16 +902,16 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         value = results.response;
     }
 
-    session.dialogData.data[varname] = value;
+    session.privateConversationData._vars[varname] = value;
     this.emit(GraphDialog.VARIABLE_SET_EVENT, session, {
       currentNode: currentNode,
       varname: varname,
       value: value
     });
-    Log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, varname, session.dialogData.data[varname]);
+    Log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, varname, session.privateConversationData._vars[varname]);
     for (let additionalVarname of currentNode.additionalVarnames) {
-      session.dialogData.data[additionalVarname] = session.dialogData.data[varname];
-      Log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, additionalVarname, session.dialogData.data[varname]);
+      session.privateConversationData._vars[additionalVarname] = session.privateConversationData._vars[varname];
+      Log('collecting response for node: %s, variable: %s, value: %s', currentNode.id, additionalVarname, session.privateConversationData._vars[varname]);
     }
     return next(results);
   }
