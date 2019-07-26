@@ -450,9 +450,9 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         // Add variables object.
         session.privateConversationData._vars = session.privateConversationData._vars || {};
         // Recover current node id after exiting from a block.
-        if (args && args.hasOwnProperty('_overrideCurrentNodeId')) {
+        if (args && args.hasOwnProperty('_currentNodeId')) {
           session.dialogData.data = args.data || {};
-          session.dialogData._currentNodeId = args._overrideCurrentNodeId;
+          session.dialogData._currentNodeId = args._currentNodeId;
         } else {
           session.dialogData.data = args || {};
         }
@@ -484,7 +484,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         Log('calling loop function');
 
         // Merge block dialog and current dialog data.
-        session.replaceDialog(this.internalPath, { data: Object.assign(Object.assign({}, session.dialogData.data), args), _overrideCurrentNodeId: session.dialogData._currentNodeId });
+        session.replaceDialog(this.internalPath, { data: Object.assign(Object.assign({}, session.dialogData.data), args), _currentNodeId: session.dialogData._currentNodeId });
       }
     ]);
   }
