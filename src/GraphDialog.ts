@@ -431,7 +431,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     Log('get dialog');
     return (session: builder.Session, results, next) => {
       Log('calling loop function for the first time');
-      session.beginDialog(this.internalPath, results);
+      session.beginDialog(this.internalPath);
     };
   }
 
@@ -458,7 +458,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         }
         if (this.options.onBeforeProcessingStep)
           return this.options.onBeforeProcessingStep.call(this, session, args, next);
-        else return next(args);
+        else return next();
       },
       (session, args, next) => {
         return this.stepInteractionHandler(session, args, next);
@@ -475,7 +475,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       (session, args, next) => {
         if (this.options.onAfterProcessingStep)
           return this.options.onAfterProcessingStep.call(this, session, args, next);
-        else return next(args);
+        else return next();
       },
       (session, args, next) => {
         return this.setNextStepHandler(session, args, next);
