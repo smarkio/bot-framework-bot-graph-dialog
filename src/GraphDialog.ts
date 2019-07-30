@@ -347,9 +347,11 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
         var that = this;
         if (graph.hasOwnProperty('blocks') && Array.isArray(graph.blocks) && graph.blocks.length) {
+          let sharedData = graph.sharedData || {};
           let promises = [];
           for (var i = 0; i < graph.blocks.length; i++) {
             let block = graph.blocks[i];
+            block.sharedData = sharedData;
             let options: IGraphDialogOptions = {
               bot: this.options.bot,
               customTypeHandlers: this.options.customTypeHandlers,

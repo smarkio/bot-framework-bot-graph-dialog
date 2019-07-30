@@ -169,6 +169,7 @@ export class Parser {
 
       // create a copy of the graph object
       var graph: any = {};
+      var sharedData = origGraph.sharedData || {};
       extend(true, graph, origGraph);
 
       Log('loading scenario:', graph.id);
@@ -217,6 +218,13 @@ export class Parser {
           delete node._parent;
           delete node._prev;
           delete node._next;
+        }
+
+        // fourth iteration - add shared data
+        for (let nodeId in nodes) {
+          let node = nodes[nodeId];
+          let inst = node._instance;
+          inst.data = Object.assign({ shared: sharedData }, inst.data);
         }
 
         this.root = <INode>graph._instance;
