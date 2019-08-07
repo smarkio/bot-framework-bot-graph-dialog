@@ -9,54 +9,54 @@ import * as extend from 'extend';
 import * as strformat from 'strformat';
 import * as Promise from 'bluebird';
 import * as crypto from 'crypto';
-import {Log} from './Logging';
+import { Log } from './Logging';
 
 /**
  * Interface for the IParser options object
- * 
+ *
  * @export
  * @interface IParserOptions
  */
 export interface IParserOptions {
 	/**
 	 * The name of the scenario for this dialog
-	 * 
+	 *
 	 * @type {string}
 	 * @memberOf IParserOptions
 	 */
-	scenario?: string;
+  scenario?: string;
 	/**
 	 * A callback for loading a scenario
-	 * 
+	 *
 	 * @param {string} name The scenario name
 	 * @returns {Promise<any>}
-	 * 
+	 *
 	 * @memberOf IParserOptions
 	 */
-	loadScenario?(name: string): Promise<any>;
+  loadScenario?(name: string): Promise<any>;
 	/**
 	 * A callback for loading a custom handler
-	 * 
+	 *
 	 * @param {string} name The custom handler name
 	 * @returns {Promise<string>}
-	 * 
+	 *
 	 * @memberOf IParserOptions
 	 */
-	loadHandler?(name: string): Promise<string>;
+  loadHandler?(name: string): Promise<string>;
 }
 
 
 /**
  * Parses a json based scenario
- * 
+ *
  * @export
  * @class Parser
  */
 export class Parser {
 
   /**
-   * 
-   * 
+   *
+   *
    * @private
    * @type {number}
    * @memberOf Parser
@@ -64,66 +64,66 @@ export class Parser {
   private uniqueNodeId: number = 1;
 
   /**
-   * 
-   * 
+   *
+   *
    * @type {INode}
    * @memberOf Parser
    */
   public root: INode = null;
   /**
-   * 
-   * 
+   *
+   *
    * @type {string}
    * @memberOf Parser
    */
   public version: string = null;
   /**
-   * 
-   * 
+   *
+   *
    * @private
-   * 
+   *
    * @memberOf Parser
    */
   private nodes = new Map<INode>();
   /**
-   * 
-   * 
-   * 
+   *
+   *
+   *
    * @memberOf Parser
    */
   public models = new Map<ILuisModel>();
   /**
-   * 
-   * 
-   * 
+   *
+   *
+   *
    * @memberOf Parser
    */
   public handlers = new Map<any>();
   /**
    * A callback to be called when parsing is completed
-   * 
+   *
    * @private
-   * 
+   *
    * @memberOf Parser
    */
   private done: () => any;
 
 	/**
 	 * Creates an instance of Parser.
-	 * 
+	 *
 	 * @param {IParserOptions} options
-	 * 
+	 *
 	 * @memberOf Parser
 	 */
-	constructor(private options: IParserOptions) {
-   
-	}
+  constructor(private options: IParserOptions) {
+
+  }
 
   /**
    * Start loading and parsing scenario
-   * 
+   *
    * @returns {Promise<any>}
-   * 
+   *
    * @memberOf Parser
    */
   public init(): Promise<any> {
@@ -131,25 +131,25 @@ export class Parser {
       this.options.loadScenario(this.options.scenario)
         .then((graph) => {
           return this.normalizeGraph(graph).then(() => {
-            return resolve();
+            return resolve(graph);
           }).catch(e => reject(e));
         })
         .catch(e => {
           console.error(`error loading scenario: ${this.options}: ${e.message}`);
           return reject(e);
-      });
+        });
     });
   }
 
   /**
    * Gets a node instance by its Id
-   * 
+   *
    * @param {string} id
    * @returns {INode}
-   * 
+   *
    * @memberOf Parser
    */
-  public getNodeInstanceById(id: string) : INode {
+  public getNodeInstanceById(id: string): INode {
     //let node = this.nodes.get(id);
     let node = this.nodes[id]; // TODO: check why above line doesn't work
     return <INode>(node && node._instance);
@@ -157,23 +157,24 @@ export class Parser {
 
   /**
    * Normalize the graph
-   * 
+   *
    * @private
    * @param {*} origGraph
    * @returns {Promise<any>}
-   * 
+   *
    * @memberOf Parser
    */
   private normalizeGraph(origGraph: any): Promise<any> {
     return new Promise((resolve, reject) => {
-      
+
       // create a copy of the graph object
       var graph: any = {};
+      var sharedData = origGraph.sharedData || {};
       extend(true, graph, origGraph);
 
       Log('loading scenario:', graph.id);
       this.updateModels(graph.models);
-      
+
       this.recursive(graph).then(() => {
 
         let nodes = this.nodes;
@@ -212,11 +213,18 @@ export class Parser {
         for (let nodeId in nodes) {
           let node = nodes[nodeId];
           let inst = node._instance;
-          
+
           delete node._visited;
           delete node._parent;
           delete node._prev;
           delete node._next;
+        }
+
+        // fourth iteration - add shared data
+        for (let nodeId in nodes) {
+          let node = nodes[nodeId];
+          let inst = node._instance;
+          inst.data = Object.assign({ shared: sharedData }, inst.data);
         }
 
         this.root = <INode>graph._instance;
@@ -229,67 +237,67 @@ export class Parser {
 
   /**
    * Init a node in the graph
-   * 
+   *
    * @private
    * @param {*} parent
    * @param {any[]} nodes
    * @param {*} nodeItem
    * @param {number} index
    * @returns {Promise<any>}
-   * 
+   *
    * @memberOf Parser
    */
   private initNode(parent: any, nodes: any[], nodeItem: any, index: number): Promise<any> {
-    
-      if (nodeItem._visited) 
-        return Promise.resolve();
-      nodeItem._visited = true;
-        
-      if (!nodeItem.id) { nodeItem.id = '_node_' + (this.uniqueNodeId++); } 
 
-      if (parent) nodeItem._parent = parent;
-      if (index > 0) nodeItem._prev = nodes[index - 1];
-      if (nodes.length > index + 1) nodeItem._next = nodes[index + 1];
+    if (nodeItem._visited)
+      return Promise.resolve();
+    nodeItem._visited = true;
 
-      if (this.isSubScenario(nodeItem)) {
-        Log(`sub-scenario for node: ${nodeItem.id} [embedding sub scenario: ${nodeItem.subScenario}]`);
+    if (!nodeItem.id) { nodeItem.id = '_node_' + (this.uniqueNodeId++); }
 
-        return new Promise((resolve, reject) => {
-          this.options.loadScenario(nodeItem.subScenario)
+    if (parent) nodeItem._parent = parent;
+    if (index > 0) nodeItem._prev = nodes[index - 1];
+    if (nodes.length > index + 1) nodeItem._next = nodes[index + 1];
+
+    if (this.isSubScenario(nodeItem)) {
+      Log(`sub-scenario for node: ${nodeItem.id} [embedding sub scenario: ${nodeItem.subScenario}]`);
+
+      return new Promise((resolve, reject) => {
+        this.options.loadScenario(nodeItem.subScenario)
           .then(scenarioObj => {
             extend(true, nodeItem, scenarioObj);
             this.updateModels(scenarioObj.models);
 
-            Log('node:', nodeItem.id, 
-              nodeItem._parent && nodeItem._parent.id ? '[parent: ' + nodeItem._parent.id + ']' : '', 
-              nodeItem._next && nodeItem._next.id ? '[next: ' + nodeItem._next.id  + ']' : '', 
-              nodeItem._prev && nodeItem._prev.id ? '[prev: ' + nodeItem._prev.id  + ']' : '');
+            Log('node:', nodeItem.id,
+              nodeItem._parent && nodeItem._parent.id ? '[parent: ' + nodeItem._parent.id + ']' : '',
+              nodeItem._next && nodeItem._next.id ? '[next: ' + nodeItem._next.id + ']' : '',
+              nodeItem._prev && nodeItem._prev.id ? '[prev: ' + nodeItem._prev.id + ']' : '');
 
             return this.recursive(nodeItem).then(() => {
               return resolve();
             }).catch(e => reject(e));
           }).catch(e => reject(e));
-        });
-      }
-      else if (nodeItem.type === 'handler') {
-        var handler = nodeItem.data.name || '';
-        Log(`loading handler for node: ${nodeItem.id} [embedding sub scenario: ${handler}]`);
+      });
+    }
+    else if (nodeItem.type === 'handler') {
+      var handler = nodeItem.data.name || '';
+      Log(`loading handler for node: ${nodeItem.id} [embedding sub scenario: ${handler}]`);
 
-        if (nodeItem.data.js) {
-          // handler code is embeded in the json in a multiline format (array) or a string
-          var content = nodeItem.data.js;
-          if (Array.isArray(content))
-            content = content.join('\n');
-          var func = this.getHandlerFunc(content);
-          if (!func) {
-            console.error(`error loading handler ${handler}`);
-          }
-          this.handlers.add(handler, func);
+      if (nodeItem.data.js) {
+        // handler code is embeded in the json in a multiline format (array) or a string
+        var content = nodeItem.data.js;
+        if (Array.isArray(content))
+          content = content.join('\n');
+        var func = this.getHandlerFunc(content);
+        if (!func) {
+          console.error(`error loading handler ${handler}`);
         }
-        else {
-          // handler code should be fethced using the loadHandler callback
-          return new Promise((resolve, reject) => {
-            this.options.loadHandler(handler)
+        this.handlers.add(handler, func);
+      }
+      else {
+        // handler code should be fethced using the loadHandler callback
+        return new Promise((resolve, reject) => {
+          this.options.loadHandler(handler)
             .then(text => {
               var func = this.getHandlerFunc(text);
               if (!func) {
@@ -298,62 +306,62 @@ export class Parser {
               }
               this.handlers.add(handler, func);
 
-              Log('node:', nodeItem.id, 
-                nodeItem._parent && nodeItem._parent.id ? '[parent: ' + nodeItem._parent.id + ']' : '', 
-                nodeItem._next && nodeItem._next.id ? '[next: ' + nodeItem._next.id  + ']' : '', 
-                nodeItem._prev && nodeItem._prev.id ? '[prev: ' + nodeItem._prev.id  + ']' : '',
-                nodeItem.type ? '[type: ' + nodeItem.type  + ']' : '',
-                nodeItem.typeName ? '[typeName: ' + nodeItem.type  + ']' : ''
-                );
+              Log('node:', nodeItem.id,
+                nodeItem._parent && nodeItem._parent.id ? '[parent: ' + nodeItem._parent.id + ']' : '',
+                nodeItem._next && nodeItem._next.id ? '[next: ' + nodeItem._next.id + ']' : '',
+                nodeItem._prev && nodeItem._prev.id ? '[prev: ' + nodeItem._prev.id + ']' : '',
+                nodeItem.type ? '[type: ' + nodeItem.type + ']' : '',
+                nodeItem.typeName ? '[typeName: ' + nodeItem.type + ']' : ''
+              );
 
               return this.recursive(nodeItem).then(() => {
                 return resolve();
               }).catch(e => reject(e));
             }).catch(e => reject(e));
-          });
-        }
+        });
       }
+    }
 
-      Log('node:', nodeItem.id, 
-          nodeItem._parent && nodeItem._parent.id ? '[parent: ' + nodeItem._parent.id + ']' : '', 
-          nodeItem._next && nodeItem._next.id ? '[next: ' + nodeItem._next.id  + ']' : '', 
-          nodeItem._prev && nodeItem._prev.id ? '[prev: ' + nodeItem._prev.id  + ']' : '',
-          nodeItem.type ? '[type: ' + nodeItem.type  + ']' : '',
-          nodeItem.typeName ? '[typeName: ' + nodeItem.type  + ']' : ''
-        );
-      
-      return this.recursive(nodeItem);
+    Log('node:', nodeItem.id,
+      nodeItem._parent && nodeItem._parent.id ? '[parent: ' + nodeItem._parent.id + ']' : '',
+      nodeItem._next && nodeItem._next.id ? '[next: ' + nodeItem._next.id + ']' : '',
+      nodeItem._prev && nodeItem._prev.id ? '[prev: ' + nodeItem._prev.id + ']' : '',
+      nodeItem.type ? '[type: ' + nodeItem.type + ']' : '',
+      nodeItem.typeName ? '[typeName: ' + nodeItem.type + ']' : ''
+    );
+
+    return this.recursive(nodeItem);
 
   }
 
   /**
    * Init a collecton of nodes
-   * 
+   *
    * @private
    * @param {*} parent
    * @param {any[]} nodes
    * @returns {Promise<any>}
-   * 
+   *
    * @memberOf Parser
    */
-  private initNodes(parent: any, nodes: any[]) : Promise<any> {
-      return Promise.all((nodes || []).map((item, index) => this.initNode(parent, nodes, item, index)));
+  private initNodes(parent: any, nodes: any[]): Promise<any> {
+    return Promise.all((nodes || []).map((item, index) => this.initNode(parent, nodes, item, index)));
   }
 
 
   /**
    * Recursively init a node and its childrens
-   * 
+   *
    * @private
    * @param {*} node
    * @returns {Promise<any>}
-   * 
+   *
    * @memberOf Parser
    */
-  private recursive(node: any) : Promise<any> {
+  private recursive(node: any): Promise<any> {
 
     return new Promise((resolve, reject) => {
-      if (!node.id) { node.id = '_node_' + (this.uniqueNodeId++); } 
+      if (!node.id) { node.id = '_node_' + (this.uniqueNodeId++); }
 
       this.initNodes(node, node.steps).then(() => {
 
@@ -361,38 +369,38 @@ export class Parser {
         return Promise.all(promises).then(() => {
 
           if (node.type === 'sequence') {
-            return this.initNodes(node, node.steps).then(()=> {
-              this.nodes[node.id] = node; 
+            return this.initNodes(node, node.steps).then(() => {
+              this.nodes[node.id] = node;
               return resolve();
             }).catch(e => reject(e));
-            
+
           }
           else {
-            this.nodes[node.id] = node; 
+            this.nodes[node.id] = node;
             return resolve();
           }
         }).catch(e => reject(e));
       }).catch(e => reject(e));
     });
   }
-  
+
   /**
    * Checks if this is a sub-scenario node, and if so- load it
-   * 
+   *
    * @private
    * @param {*} nodeItem
    * @returns {boolean}
-   * 
+   *
    * @memberOf Parser
    */
-  private isSubScenario(nodeItem: any) : boolean {
+  private isSubScenario(nodeItem: any): boolean {
     if (!nodeItem.subScenario) return false;
 
     var parent = nodeItem._parent;
     while (parent) {
-      if (nodeItem.subScenario === parent.id) { 
-          console.error('recursive subScenario found: ', nodeItem.subScenario);
-          throw new Error('recursive subScenario found ' + nodeItem.subScenario);
+      if (nodeItem.subScenario === parent.id) {
+        console.error('recursive subScenario found: ', nodeItem.subScenario);
+        throw new Error('recursive subScenario found ' + nodeItem.subScenario);
       }
       parent = parent._parent;
     }
@@ -402,20 +410,20 @@ export class Parser {
 
   /**
    * Get handler function from a string
-   * 
+   *
    * @private
    * @param {string} funcText
    * @returns {*}
-   * 
+   *
    * @memberOf Parser
    */
   private getHandlerFunc(funcText: string): any {
     let text = `(function(){
-                  return function(module) { 
+                  return function(module) {
                     ${funcText}
                   }
                   })()
-                `;      
+                `;
 
     var wrapperFunc = eval(text);
     var m: any = {};
@@ -426,17 +434,17 @@ export class Parser {
 
 	/**
 	 * Updates the internal models collection
-	 * 
+	 *
 	 * @private
 	 * @param {any[]} models
-	 * 
+	 *
 	 * @memberOf Parser
 	 */
-	private updateModels(models: any[]): void {
-      (models || []).forEach(model => { 
-				this.models.add(model.name, new LuisModel(model.name, model.url));
-			});
-	}
+  private updateModels(models: any[]): void {
+    (models || []).forEach(model => {
+      this.models.add(model.name, new LuisModel(model.name, model.url));
+    });
+  }
 
   private calculateHash(text: string) {
     return crypto.createHash('md5').update(text).digest('hex');

@@ -6,7 +6,6 @@
     "extend": "github:DefinitelyTyped/DefinitelyTyped/extend/extend.d.ts#44be13ae844ec0721109542d5902e41438d72855",
     "form-data": "github:DefinitelyTyped/DefinitelyTyped/form-data/form-data.d.ts#44be13ae844ec0721109542d5902e41438d72855",
     "node": "github:DefinitelyTyped/DefinitelyTyped/node/node.d.ts#44be13ae844ec0721109542d5902e41438d72855",
-    "promise": "github:DefinitelyTyped/DefinitelyTyped/promise/promise.d.ts#44be13ae844ec0721109542d5902e41438d72855",
     "request": "github:DefinitelyTyped/DefinitelyTyped/request/request.d.ts#44be13ae844ec0721109542d5902e41438d72855",
     "request-promise": "github:DefinitelyTyped/DefinitelyTyped/request-promise/request-promise.d.ts#44be13ae844ec0721109542d5902e41438d72855",
     "underscore": "github:DefinitelyTyped/DefinitelyTyped/underscore/underscore.d.ts#44be13ae844ec0721109542d5902e41438d72855"
