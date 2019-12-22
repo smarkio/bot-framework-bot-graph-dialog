@@ -14,6 +14,7 @@ import { ValueParser, ICustomValueParser, CustomValueParser } from './ValueParse
 import events = require('events');
 import { Log, ErrorLog, DebugLog } from './Logging';
 import * as utils from './Utils';
+import { type } from 'os';
 
 var uuid = require('uuid');
 
@@ -498,27 +499,39 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
           if (!session.dialogData.config) {
             session.dialogData.data = args.data;
             session.dialogData.config = args.config;
+
+            // Create a new responses array (for compatibility with older published chatbots).
+            let cards = args.config.cards || [];
+            let responses = {};
+            for (let i = 0; i < cards.length; i++) {
+              let card = cards[i];
+              let button = card.data.buttons[0];
+              responses[button.value.trim().toLowerCase()] = { id: card.id, value: button.value };
+              responses[`${i + 1}`] = { id: card.id, value: button.value };
+            }
+            session.dialogData.config.responses = responses;
             session.send(this.generateCarouselMessage(builder, session, args.config));
           } else {
             next();
           }
         },
         (session, args, next) => {
-          let response = session.message.text;
+          let response = session.message.text.trim().toLowerCase();
           if (typeof session.dialogData.config.responses != "undefined") {
             if (typeof session.dialogData.config.responses[response] != "undefined") {
-              let value = response;
               for (let card of session.dialogData.config.cards) {
-                if (card.id == session.dialogData.config.responses[response]) {
+                if (card.id == session.dialogData.config.responses[response].id) {
                   var copyOfCard = Object.assign({}, card);
                   copyOfCard.data.buttons = [];
                   session.send(this.generateHeroCardMessage(builder, session, card));
-                  session.endDialogWithResult({ 'response': value });
+                  session.endDialogWithResult({ 'response': session.dialogData.config.responses[response].value });
                   return;
                 }
               }
               session.send(this.generateCarouselMessage(builder, session, session.dialogData.config));
               return;
+            } else if (typeof session.dialogData.config.messages != "undefined" && typeof session.dialogData.config.messages['invalid_option']) {
+              session.send(utils.replaceVariables(session.dialogData.config.messages['invalid_option'], session));
             }
 
           }
@@ -667,7 +680,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     if ("undefined" != typeof data.text) {
       hero.text(utils.replaceVariables(data.text, session));
     }
-    if ("undefined" != typeof data.images[0] && data.images.length > 0) {
+    if ("undefined" != typeof data.images && "undefined" != typeof data.images[0] && data.images.length > 0) {
       let imageCard = builder.CardImage.create(session, data.images[0]);
       hero.images([
         imageCard
