@@ -249,7 +249,6 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
   private internalPath: string;
   private blockGraphDialogs: Array<GraphDialog> = [];
 
-
 	/**
 	 * Creates an instance of GraphDialog.
 	 *
@@ -286,6 +285,15 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
   public getDialogId(): string {
     return this.parser ? this.parser.root.id : null;
+  }
+
+  public getGoals(): any {
+    return (this.parser && this.parser.root.data.goals)? this.parser.root.data.goals: null;
+  }
+
+
+  public getGobalRules(): any {
+    return (this.parser && this.parser.root.data.globalRules)? this.parser.root.data.globalRules: null;
   }
 
   /**
@@ -452,6 +460,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         Log('before processing');
         // Add variables object.
         session.privateConversationData._vars = session.privateConversationData._vars || {};
+        session.privateConversationData._last_interaction = new Date().getTime();
         // Recover current node id after exiting from a block.
         if (args && args.hasOwnProperty('_currentNodeId')) {
           session.dialogData.data = args.data || {};
@@ -479,6 +488,14 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         if (this.options.onAfterProcessingStep)
           return this.options.onAfterProcessingStep.call(this, session, args, next);
         else return next();
+      },
+      (session, args, next) => {
+        let globalRuleBlock = utils.getBlockToJump(session,this);
+        if(globalRuleBlock && globalRuleBlock.length > 0){
+          Log(`Global rule matched wil start block: ${globalRuleBlock}`);
+          session.beginDialog(`/${this.getBlockScenarioId(globalRuleBlock)}`);
+        }
+        next(args);
       },
       (session, args, next) => {
         return this.setNextStepHandler(session, args, next);
