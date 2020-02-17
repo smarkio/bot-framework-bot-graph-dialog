@@ -490,14 +490,6 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         else return next();
       },
       (session, args, next) => {
-        let globalRuleBlock = utils.getBlockToJump(session,this);
-        if(globalRuleBlock && globalRuleBlock.length > 0){
-          Log(`Global rule matched wil start block: ${globalRuleBlock}`);
-          session.beginDialog(`/${this.getBlockScenarioId(globalRuleBlock)}`);
-        }
-        next(args);
-      },
-      (session, args, next) => {
         return this.setNextStepHandler(session, args, next);
       },
       (session, args, next) => {
