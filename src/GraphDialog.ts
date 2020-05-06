@@ -288,12 +288,12 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
   }
 
   public getGoals(): any {
-    return (this.parser && this.parser.root.data.goals)? this.parser.root.data.goals: null;
+    return (this.parser && this.parser.root.data.goals) ? this.parser.root.data.goals : null;
   }
 
 
   public getGobalRules(): any {
-    return (this.parser && this.parser.root.data.globalRules)? this.parser.root.data.globalRules: null;
+    return (this.parser && this.parser.root.data.globalRules) ? this.parser.root.data.globalRules : null;
   }
 
   /**
@@ -358,7 +358,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         if (graph.hasOwnProperty('blocks') && Array.isArray(graph.blocks) && graph.blocks.length) {
           let sharedData = graph.sharedData || {};
           let promises = [];
-          for (var i = 0; i < graph.blocks.length; i++) {
+          for (let i = 0; i < graph.blocks.length; i++) {
             let block = graph.blocks[i];
             block.sharedData = sharedData;
             let options: IGraphDialogOptions = {
@@ -376,6 +376,13 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
           }
 
           return Promise.all(promises).then((blockGraphDialogs) => {
+            // Bind events from child blocks to parent.
+            for (let i = 0; i < blockGraphDialogs.length; i++) {
+              let blockGraphDialog = blockGraphDialogs[i];
+              blockGraphDialog.on(GraphDialog.CHAT_END_EVENT, function (session, args) {
+                that.emit(GraphDialog.CHAT_END_EVENT, session, args);
+              });
+            }
             this.blockGraphDialogs = blockGraphDialogs;
             resolve(that);
           });
