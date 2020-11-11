@@ -21,6 +21,12 @@ function goalsCounterById(session: builder.Session, graphDialog: GraphDialog): a
         return {};
     }
     var counters = {};
+    for (const goal in dialogGoals) {
+        if (dialogGoals.hasOwnProperty(goal)) {
+            counters[goal] = 0;
+            
+        }
+    }
     var goals = session.userData._goals;
     for(var i in goals){
         if(!dialogGoals.hasOwnProperty(goals[i].goalId)){
