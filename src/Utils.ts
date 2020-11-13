@@ -13,9 +13,6 @@ export function replaceVariables(text: string, session: builder.Session, default
 }
 
 function goalsCounterById(session: builder.Session, graphDialog: GraphDialog): any{
-    if(!session.userData._goals){
-        return {};
-    }
     var dialogGoals = graphDialog.getGoals();
     if(!dialogGoals){
         return {};
@@ -27,7 +24,7 @@ function goalsCounterById(session: builder.Session, graphDialog: GraphDialog): a
             
         }
     }
-    var goals = session.userData._goals;
+    var goals = session.userData._goals || {};
     for(var i in goals){
         if(!dialogGoals.hasOwnProperty(goals[i].goalId)){
             continue;
