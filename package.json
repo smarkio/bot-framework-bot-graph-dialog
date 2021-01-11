@@ -1,6 +1,6 @@
 {
     "name": "bot-graph-dialog",
-    "version": "3.6.13",
+    "version": "3.7.0",
     "description": "bot graph dialog",
     "main": "index.js",
     "scripts": {
@@ -23,7 +23,7 @@
     "homepage": "https://github.com/CatalystCode/bot-graph-dialog#readme",
     "dependencies": {
         "bluebird": "^3.4.6",
-        "botbuilder": "3.6.0",
+        "botbuilder": "3.16.0",
         "debug": "^2.6.6",
         "extend": "^3.0.0",
         "jsep": "0.3.2",
@@ -31,6 +31,7 @@
         "strformat": "0.0.7",
         "underscore": "^1.8.3",
         "uuid": "^2.0.3",
-        "smarkio-rules-engine": "github:smarkio/smarkio-js-rulesengine"
+        "smarkio-rules-engine": "github:smarkio/smarkio-js-rulesengine",
+        "typescript": "3.9.7"
     }
 }

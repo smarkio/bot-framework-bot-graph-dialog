@@ -1,8 +1,0 @@
-{
-  "resolution": "main",
-  "tree": {
-    "src": "https://raw.githubusercontent.com/DefinitelyTyped/DefinitelyTyped/44be13ae844ec0721109542d5902e41438d72855/form-data/form-data.d.ts",
-    "raw": "github:DefinitelyTyped/DefinitelyTyped/form-data/form-data.d.ts#44be13ae844ec0721109542d5902e41438d72855",
-    "typings": "https://raw.githubusercontent.com/DefinitelyTyped/DefinitelyTyped/44be13ae844ec0721109542d5902e41438d72855/form-data/form-data.d.ts"
-  }
-}

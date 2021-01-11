@@ -263,9 +263,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     // Initialize custom handlers
     options.customTypeHandlers = options.customTypeHandlers || new Array<ICustomNodeTypeHandler>();
     options.customValueParsers = options.customValueParsers || new Array<ICustomValueParser>();
-    this.internalPath = '/_' + uuid.v4();
-    this.setBotDialog();
-    this.checkOrCreateCustomDialogs();
+    this.internalPath = null;//'/_' + uuid.v4();
 
     this.customTypeHandlers = new Map<CustomNodeTypeHandler>();
     for (let i = 0; i < options.customTypeHandlers.length; i++) {
@@ -317,7 +315,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
    * @memberof IGraphDialog
    */
   public getBlockScenarioId(block: string): string {
-    return `${this.getParentScenearioId()}/block/${block}`
+    return `${this.getParentScenearioId()}_${this.getDialogVersion()}/block/${block}`
   }
 
   /**
@@ -353,7 +351,9 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       this.parser.init().then((graph) => {
         Log('parser is ready');
         this.nav = new Navigator(this.parser);
-
+        this.internalPath = `/${this.getScenarioId()}_${this.getDialogVersion()}`;
+        this.setBotDialog();
+        this.checkOrCreateCustomDialogs();
         var that = this;
         if (graph.hasOwnProperty('blocks') && Array.isArray(graph.blocks) && graph.blocks.length) {
           let sharedData = graph.sharedData || {};
@@ -365,7 +365,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
               bot: this.options.bot,
               customTypeHandlers: this.options.customTypeHandlers,
               customValueParsers: this.options.customValueParsers,
-              scenario: `${this.options.scenario}/block/${block.id}`,
+              scenario: this.getBlockScenarioId(block.id),
               loadScenario: () => {
                 return new Promise((resolve) => {
                   resolve(block);
@@ -461,7 +461,6 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     * @memberOf GraphDialog
     */
   private setBotDialog(): void {
-
     this.options.bot.dialog(this.internalPath, [
       (session, args, next) => {
         Log('before processing');
@@ -505,7 +504,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         // Merge block dialog and current dialog data.
         session.replaceDialog(this.internalPath, { data: Object.assign(Object.assign({}, session.dialogData.data), args), _currentNodeId: session.dialogData._currentNodeId });
       }
-    ]);
+    ], true);
   }
 
   private checkOrCreateCustomDialogs() {
