@@ -228,7 +228,7 @@ export class Parser {
         }
 
         this.root = <INode>graph._instance;
-        this.version = graph.version || this.calculateHash(JSON.stringify(origGraph));
+        this.version = graph.version || this.root.data.version || this.calculateHash(JSON.stringify(origGraph));
 
         return resolve();
       }).catch(e => reject(e));

@@ -315,7 +315,11 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
    * @memberof IGraphDialog
    */
   public getBlockScenarioId(block: string): string {
-    return `${this.getParentScenearioId()}_${this.getDialogVersion()}/block/${block}`
+    if(this.options.scenario.indexOf('/block/') >=0){
+      return `${this.getParentScenearioId()}/block/${block}`
+    }else{
+      return `${this.getParentScenearioId()}_${this.getDialogVersion()}/block/${block}`
+    }
   }
 
   /**
