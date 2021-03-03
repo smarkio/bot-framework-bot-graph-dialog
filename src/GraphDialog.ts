@@ -385,6 +385,29 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
               let blockGraphDialog = blockGraphDialogs[i];
               blockGraphDialog.on(GraphDialog.CHAT_END_EVENT, function (session, args) {
                 that.emit(GraphDialog.CHAT_END_EVENT, session, args);
+              });  
+
+              blockGraphDialog.on(GraphDialog.STEP_START_EVENT, function (session, args) {
+                that.emit(GraphDialog.STEP_START_EVENT, session, args);
+              });
+
+              blockGraphDialog.on(GraphDialog.STEP_END_EVENT, function (session, args) {
+                that.emit(GraphDialog.STEP_END_EVENT, session, args);
+              });
+
+              blockGraphDialog.on(GraphDialog.STEP_CHANGE_EVENT, function (session, args) {
+                that.emit(GraphDialog.STEP_CHANGE_EVENT, session, args);
+              });
+              blockGraphDialog.on(GraphDialog.STEP_OVERRIDE_EVENT, function (session, args) {
+                that.emit(GraphDialog.STEP_OVERRIDE_EVENT, session, args);
+              });
+
+              blockGraphDialog.on(GraphDialog.STEP_VALIDATION_FAILED_EVENT, function (session, args) {
+                that.emit(GraphDialog.STEP_VALIDATION_FAILED_EVENT, session, args);
+              });
+
+              blockGraphDialog.on(GraphDialog.VARIABLE_SET_EVENT, function (session, args) {
+                that.emit(GraphDialog.VARIABLE_SET_EVENT, session, args);
               });
             }
             this.blockGraphDialogs = blockGraphDialogs;
