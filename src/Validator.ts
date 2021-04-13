@@ -31,6 +31,9 @@ export module Validator {
       case 'notEmpty':
         result = (value != null && value != '');
         break;
+      case 'time':
+        result = this.validateTime(value, configuration);
+        break;
 
     }
 
@@ -60,6 +63,51 @@ export module Validator {
     return true;
 
   }
+
+  /**
+   *
+   * @param value
+   * @param configuration
+   * @returns {boolean}
+   */
+  export function validateTime(value: any, configuration: any): boolean {
+
+
+    if(configuration.type == "date"){
+      return this.validateDate(value, configuration);
+    }else{
+      let date = value.resolution.start;
+
+      if (configuration.min_date) {
+        let split = configuration.min_date.split(':');
+        if(split.length == 2){
+          if(date.getHours() < split[0]){
+            return false;
+          }
+          if(date.getHours() == split[0] && date.getMinutes() < split[1]){
+            return false;
+          }
+        }
+      }
+  
+      if (configuration.max_date) {
+        let split = configuration.max_date.split(':');
+        if(split.length == 2){
+          if(date.getHours() > split[0]){
+            return false;
+          }
+          if(date.getHours() == split[0] && date.getMinutes() > split[1]){
+            return false;
+          }
+        }
+      }
+  
+    }
+
+    return true;
+    
+  }
+
 
   /**
    *
