@@ -995,7 +995,10 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       });
     }
 
-    if (currentNode.needValidation) {
+    if (session.dialogData.__repeat){
+      nextNode = currentNode;
+      delete session.dialogData.__repeat;
+    } else if(currentNode.needValidation) {
       nextNode = currentNode;
       currentNode.needValidation = false;
     } else {
