@@ -39,7 +39,7 @@ function goalsCounterById(session: builder.Session, graphDialog: GraphDialog): a
         if(((new Date()).getTime()-goals[i].timeStamp)/86400000< period){
             counters[goals[i].goalId]++;
         }
-    }``
+    }
     return counters;
 }
 
