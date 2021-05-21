@@ -355,7 +355,12 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       this.parser.init().then((graph) => {
         Log('parser is ready');
         this.nav = new Navigator(this.parser);
-        this.internalPath = `/${this.getScenarioId()}_${this.getDialogVersion()}`;
+        let scenario = this.getScenarioId();
+        if(scenario.indexOf('/block/') >=0){
+          this.internalPath = `/${this.getScenarioId()}_int`;
+        }else{
+          this.internalPath = `/${this.getScenarioId()}_${this.getDialogVersion()}`;
+        }
         this.setBotDialog();
         this.checkOrCreateCustomDialogs();
         var that = this;
@@ -475,8 +480,8 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
   public getDialog(): IStepFunction {
     Log('get dialog');
     return (session: builder.Session, results, next) => {
-      Log('calling loop function for the first time');
-      session.beginDialog(this.internalPath);
+        Log('calling loop function for the first time');
+        session.beginDialog(this.internalPath);
     };
   }
 
@@ -488,6 +493,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     * @memberOf GraphDialog
     */
   private setBotDialog(): void {
+    Log('Setting bot dialog', this.internalPath);
     this.options.bot.dialog(this.internalPath, [
       (session, args, next) => {
         Log('before processing');
@@ -539,6 +545,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       this.options.bot.dialog('carouselPrompt', [
         (session, args, next) => {
           if (!session.dialogData.config) {
+            console.log('cards without config');
             session.dialogData.data = args.data;
             session.dialogData.config = args.config;
 
@@ -554,6 +561,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
             session.dialogData.config.responses = responses;
             session.send(this.generateCarouselMessage(builder, session, args.config));
           } else {
+            console.log('cards with config');
             next();
           }
         },
@@ -596,6 +604,11 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
    * @memberOf GraphDialog
    */
   private stepInteractionHandler(session: builder.Session, results, next): void {
+    if (session.dialogData.__repeat){
+      // Merge block dialog and current dialog data.
+      next(results);
+      return;
+    }
     session.privateConversationData._lastMessage = session.message && session.message.text;
     let currentNode = this.nav.getCurrentNode(session);
     let skipAfterError = false;
@@ -829,6 +842,11 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
    */
   private stepValidationHandler(session: builder.Session, results, next) {
     Log('Validation phase');
+    if (session.dialogData.__repeat){
+      Log('Found repeat action value, ignoring phase');
+      next(results);
+      return;
+    }
     let currentNode = this.nav.getCurrentNode(session);
     let varname = currentNode.varname;
 
@@ -872,6 +890,10 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
  * @memberOf GraphDialog
  */
   private stepValueParserHandler(session: builder.Session, results, next) {
+    if (session.dialogData.__repeat){
+      Log('Found repeat action value, ignoring phase');
+      return  next(results);
+    }
     let currentNode = this.nav.getCurrentNode(session);
     let varname = currentNode.varname;
 
@@ -920,7 +942,10 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
    */
   private stepResultCollectionHandler(session: builder.Session, results, next) {
     DebugLog('Result phase', results);
-
+    if (session.dialogData.__repeat){
+      Log('Found repeat action value, ignoring phase');
+      return next(results);
+    }
     let currentNode = this.nav.getCurrentNode(session);
     let varname = currentNode.varname;
 

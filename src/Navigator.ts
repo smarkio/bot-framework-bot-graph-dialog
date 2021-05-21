@@ -67,7 +67,7 @@ export class Navigator {
    * @memberOf Navigator
    */
   public getCurrentNode(session: builder.Session): INode {
-    Log('getCurrentNode');
+    Log('getCurrentNode', <string>session.dialogData._currentNodeId);
     let currNodeId = <string>session.dialogData._currentNodeId;
     if (!currNodeId) {
       let root = this.parser.root;
