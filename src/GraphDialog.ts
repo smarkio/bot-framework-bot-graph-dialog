@@ -545,7 +545,6 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       this.options.bot.dialog('carouselPrompt', [
         (session, args, next) => {
           if (!session.dialogData.config) {
-            console.log('cards without config');
             session.dialogData.data = args.data;
             session.dialogData.config = args.config;
 
@@ -561,7 +560,6 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
             session.dialogData.config.responses = responses;
             session.send(this.generateCarouselMessage(builder, session, args.config));
           } else {
-            console.log('cards with config');
             next();
           }
         },
