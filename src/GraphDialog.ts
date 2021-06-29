@@ -533,10 +533,28 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       },
       (session, args, next) => {
         Log('calling loop function');
+        if(typeof (session as any).runGlobalRules == "function") {
+          (session as any).runGlobalRules(session).catch((err)=>{
+            if(typeof (session as any).rescheduleGlobalRules == "function") {
+              (session as any).rescheduleGlobalRules(session);
+            }
+    
+            // Merge block dialog and current dialog data.
+            session.replaceDialog(this.internalPath, { data: Object.assign(Object.assign({}, session.dialogData.data), args), _currentNodeId: session.dialogData._currentNodeId });
+          });
+            
+          
+        }else{
+          if(typeof (session as any).rescheduleGlobalRules == "function") {
+            (session as any).rescheduleGlobalRules(session);
+          }
+  
+          // Merge block dialog and current dialog data.
+          session.replaceDialog(this.internalPath, { data: Object.assign(Object.assign({}, session.dialogData.data), args), _currentNodeId: session.dialogData._currentNodeId });
+      
+        }
 
-        // Merge block dialog and current dialog data.
-        session.replaceDialog(this.internalPath, { data: Object.assign(Object.assign({}, session.dialogData.data), args), _currentNodeId: session.dialogData._currentNodeId });
-      }
+        }
     ], true);
   }
 
