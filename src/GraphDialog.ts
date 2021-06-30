@@ -532,6 +532,13 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
         return this.setNextStepHandler(session, args, next);
       },
       (session, args, next) => {
+        if(session.privateConversationData.hasOwnProperty('_last_send_time') && ((new Date()).getTime() - session.privateConversationData._last_send_time) <= session.privateConversationData._delay){
+          session.beginDialog('_timeout_dialog',((new Date()).getTime() - session.privateConversationData._last_send_time));
+        }else{
+          next();
+        }
+      },
+      (session, args, next) => {
         Log('calling loop function');
         if(typeof (session as any).runGlobalRules == "function") {
           (session as any).runGlobalRules(session).catch((err)=>{
@@ -556,6 +563,19 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
 
         }
     ], true);
+    if(!this.options.bot.dialog('_timeout_dialog')){
+      this.options.bot.dialog('_timeout_dialog',[
+        (session,args, next)=>{
+          if(args){
+            setTimeout(()=>{
+
+              session.endDialog()
+            }, session.privateConversationData._delay - args);
+          }
+        },
+        (session,args, next)=>{}
+      ], true);
+    }
   }
 
   private checkOrCreateCustomDialogs() {
