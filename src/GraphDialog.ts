@@ -566,7 +566,7 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
     if(!this.options.bot.dialog('_timeout_dialog')){
       this.options.bot.dialog('_timeout_dialog',[
         (session,args, next)=>{
-          if(args){
+          if(!isNaN(parseInt(args))){
             setTimeout(()=>{
 
               session.endDialog()
