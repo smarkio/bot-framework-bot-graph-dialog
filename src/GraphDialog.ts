@@ -561,7 +561,12 @@ export class GraphDialog extends events.EventEmitter implements IGraphDialog {
       
         }
 
-        }
+        },
+      (session, args, next) => {
+        Log('loop function if resumed from global rule');
+        session.replaceDialog(this.internalPath, { data: Object.assign(Object.assign({}, session.dialogData.data), args), _currentNodeId: session.dialogData._currentNodeId });
+
+      }
     ], true);
     if(!this.options.bot.dialog('_timeout_dialog')){
       this.options.bot.dialog('_timeout_dialog',[
